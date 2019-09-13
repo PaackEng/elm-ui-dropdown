@@ -18,6 +18,7 @@ main =
 type alias Model =
     { selectedOption : Maybe String
     , isOpen : Bool
+    , filterText : String
     }
 
 
@@ -25,6 +26,7 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     ( { selectedOption = Nothing
       , isOpen = False
+      , filterText = ""
       }
     , Cmd.none
     )
@@ -42,6 +44,7 @@ options =
 type Msg
     = ToggleDropdown
     | OptionPicked String
+    | FilterChanged String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -57,6 +60,9 @@ update msg model =
               }
             , Cmd.none
             )
+
+        FilterChanged val ->
+            ( { model | filterText = val }, Cmd.none )
 
 
 
@@ -78,11 +84,15 @@ view model =
         state =
             { selectedItem = model.selectedOption
             , isOpen = model.isOpen
+            , filterText = model.filterText
             }
 
+        data =
+            options |> List.filter (String.contains model.filterText)
+
         dropdown =
-            Dropdown.config ToggleDropdown OptionPicked
-                |> Dropdown.toEl state options
+            Dropdown.config ToggleDropdown FilterChanged OptionPicked
+                |> Dropdown.toEl state data
     in
     el [] dropdown
         |> layout []

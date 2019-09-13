@@ -1,22 +1,27 @@
-module Dropdown exposing (Dropdown, State, config, toEl, withContainerAttributes, withDisabledAttributes, withInputAttributes, withListAttributes, withListItemAttributes, withPromptText, withTextAttributes)
+module Dropdown exposing (Dropdown, State, config, toEl, withContainerAttributes, withDisabledAttributes, withInputAttributes, withListAttributes, withListItemAttributes, withPromptText, withSearchAttributes, withTextAttributes)
 
 import Element exposing (..)
 import Element.Events as Events
+import Element.Input as Input
 
 
 type alias State =
     { selectedItem : Maybe String
     , isOpen : Bool
+    , filterText : String
     }
 
 
 type alias Options msg =
     { promptText : String
+    , filterPlaceholder : String
     , clickedMsg : msg
+    , searchMsg : String -> msg
     , itemPickedMsg : String -> msg
     , containerAttributes : List (Attribute msg)
     , disabledAttributes : List (Attribute msg)
     , inputAttributes : List (Attribute msg)
+    , searchAttributes : List (Attribute msg)
     , textAttributes : List (Attribute msg)
     , listAttributes : List (Attribute msg)
     , listItemAttributes : List (Attribute msg)
@@ -27,15 +32,18 @@ type Dropdown msg
     = Dropdown (Options msg)
 
 
-config : msg -> (String -> msg) -> Dropdown msg
-config clickedMsg itemPickedMsg =
+config : msg -> (String -> msg) -> (String -> msg) -> Dropdown msg
+config clickedMsg searchMsg itemPickedMsg =
     Dropdown
         { promptText = "-- Select --"
+        , filterPlaceholder = "Filter values"
         , clickedMsg = clickedMsg
+        , searchMsg = searchMsg
         , itemPickedMsg = itemPickedMsg
         , containerAttributes = []
         , disabledAttributes = []
         , inputAttributes = []
+        , searchAttributes = []
         , textAttributes = []
         , listAttributes = []
         , listItemAttributes = []
@@ -62,6 +70,11 @@ withInputAttributes attrs (Dropdown options) =
     Dropdown { options | inputAttributes = attrs }
 
 
+withSearchAttributes : List (Attribute msg) -> Dropdown msg -> Dropdown msg
+withSearchAttributes attrs (Dropdown options) =
+    Dropdown { options | searchAttributes = attrs }
+
+
 withTextAttributes : List (Attribute msg) -> Dropdown msg -> Dropdown msg
 withTextAttributes attrs (Dropdown options) =
     Dropdown { options | textAttributes = attrs }
@@ -84,29 +97,40 @@ toEl state data (Dropdown options) =
             state.selectedItem
                 |> Maybe.withDefault options.promptText
 
-        items =
-            if state.isOpen then
-                column options.listAttributes (List.map (viewItem options) data)
-
-            else
-                none
-
-        mainAttr =
+        headAttrs =
             case data of
                 [] ->
                     options.disabledAttributes ++ options.inputAttributes
 
                 _ ->
-                    onClick options.clickedMsg :: options.inputAttributes
+                    options.inputAttributes
+
+        prompt =
+            el (onClick options.clickedMsg :: options.textAttributes) (text mainText)
+
+        search =
+            Input.search options.searchAttributes
+                { onChange = options.searchMsg
+                , text = state.filterText
+                , placeholder = Just <| Input.placeholder [] (text options.filterPlaceholder)
+                , label = Input.labelHidden "Filter List"
+                }
+
+        ( head, body ) =
+            if state.isOpen then
+                let
+                    items =
+                        column options.listAttributes (List.map (viewItem options) data)
+                in
+                ( search, el [ width fill, inFront items ] none )
+
+            else
+                ( prompt, none )
     in
     column
         options.containerAttributes
-        [ row
-            mainAttr
-            [ el options.textAttributes (text mainText)
-            , el [] (text "▾")
-            ]
-        , el [ width fill, inFront items ] none
+        [ row headAttrs [ head, el [ onClick options.clickedMsg ] (text "▾") ]
+        , body
         ]
 
 

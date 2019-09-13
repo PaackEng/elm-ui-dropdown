@@ -20,6 +20,7 @@ main =
 type alias Model =
     { selectedOption : Maybe String
     , isOpen : Bool
+    , filterText : String
     }
 
 
@@ -27,6 +28,7 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     ( { selectedOption = Nothing
       , isOpen = False
+      , filterText = ""
       }
     , Cmd.none
     )
@@ -44,6 +46,7 @@ options =
 type Msg
     = ToggleDropdown
     | OptionPicked String
+    | FilterChanged String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -59,6 +62,9 @@ update msg model =
               }
             , Cmd.none
             )
+
+        FilterChanged val ->
+            ( { model | filterText = val }, Cmd.none )
 
 
 
@@ -80,31 +86,43 @@ view model =
         state =
             { selectedItem = model.selectedOption
             , isOpen = model.isOpen
+            , filterText = model.filterText
             }
 
         containerAttrs =
-            [ centerX, centerY ]
+            [ width (px 300), centerX, centerY ]
 
         inputAttrs =
-            [ Border.width 1, Border.rounded 5, paddingXY 16 8 ]
+            [ Border.width 1, Border.rounded 5, paddingXY 16 8, width fill, spacing 10 ]
+
+        searchAttrs =
+            [ paddingXY 0 3 ]
 
         textAttrs =
-            [ paddingXY 8 0 ]
+            [ paddingXY 8 0, width fill ]
 
         listAttrs =
-            [ Border.width 1, width fill, spacing 5 ]
+            [ Border.width 1
+            , Border.roundEach { topLeft = 0, topRight = 0, bottomLeft = 5, bottomRight = 5 }
+            , width fill
+            , spacing 5
+            ]
 
         listItemAttrs =
             [ Font.size 16, centerX, padding 8 ]
 
+        data =
+            options |> List.filter (String.contains model.filterText)
+
         dropdown =
-            Dropdown.config ToggleDropdown OptionPicked
+            Dropdown.config ToggleDropdown FilterChanged OptionPicked
                 |> Dropdown.withContainerAttributes containerAttrs
                 |> Dropdown.withInputAttributes inputAttrs
+                |> Dropdown.withSearchAttributes searchAttrs
                 |> Dropdown.withTextAttributes textAttrs
                 |> Dropdown.withListAttributes listAttrs
                 |> Dropdown.withListItemAttributes listItemAttrs
-                |> Dropdown.toEl state options
+                |> Dropdown.toEl state data
     in
     el [ width fill, height fill, padding 20 ] dropdown
         |> layout []
