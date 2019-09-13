@@ -1,17 +1,17 @@
-module Dropdown exposing (..)
+module Dropdown exposing (Dropdown, State, config, toEl, withContainerAttributes, withDisabledAttributes, withInputAttributes, withListAttributes, withListItemAttributes, withPromptText, withTextAttributes)
 
 import Element exposing (..)
 import Element.Events as Events
 
 
-type alias Context =
+type alias State =
     { selectedItem : Maybe String
     , isOpen : Bool
     }
 
 
-type alias Config msg =
-    { defaultText : String
+type alias Options msg =
+    { promptText : String
     , clickedMsg : msg
     , itemPickedMsg : String -> msg
     , containerAttributes : List (Attribute msg)
@@ -23,42 +23,99 @@ type alias Config msg =
     }
 
 
-view : Config msg -> Context -> List String -> Element msg
-view config context data =
+type Dropdown msg
+    = Dropdown (Options msg)
+
+
+config : msg -> (String -> msg) -> Dropdown msg
+config clickedMsg itemPickedMsg =
+    Dropdown
+        { promptText = "-- Select --"
+        , clickedMsg = clickedMsg
+        , itemPickedMsg = itemPickedMsg
+        , containerAttributes = []
+        , disabledAttributes = []
+        , inputAttributes = []
+        , textAttributes = []
+        , listAttributes = []
+        , listItemAttributes = []
+        }
+
+
+withPromptText : String -> Dropdown msg -> Dropdown msg
+withPromptText promptText (Dropdown options) =
+    Dropdown { options | promptText = promptText }
+
+
+withContainerAttributes : List (Attribute msg) -> Dropdown msg -> Dropdown msg
+withContainerAttributes attrs (Dropdown options) =
+    Dropdown { options | containerAttributes = attrs }
+
+
+withDisabledAttributes : List (Attribute msg) -> Dropdown msg -> Dropdown msg
+withDisabledAttributes attrs (Dropdown options) =
+    Dropdown { options | disabledAttributes = attrs }
+
+
+withInputAttributes : List (Attribute msg) -> Dropdown msg -> Dropdown msg
+withInputAttributes attrs (Dropdown options) =
+    Dropdown { options | inputAttributes = attrs }
+
+
+withTextAttributes : List (Attribute msg) -> Dropdown msg -> Dropdown msg
+withTextAttributes attrs (Dropdown options) =
+    Dropdown { options | textAttributes = attrs }
+
+
+withListAttributes : List (Attribute msg) -> Dropdown msg -> Dropdown msg
+withListAttributes attrs (Dropdown options) =
+    Dropdown { options | listAttributes = attrs }
+
+
+withListItemAttributes : List (Attribute msg) -> Dropdown msg -> Dropdown msg
+withListItemAttributes attrs (Dropdown options) =
+    Dropdown { options | listItemAttributes = attrs }
+
+
+toEl : State -> List String -> Dropdown msg -> Element msg
+toEl state data (Dropdown options) =
     let
         mainText =
-            context.selectedItem
-                |> Maybe.withDefault config.defaultText
+            state.selectedItem
+                |> Maybe.withDefault options.promptText
+
+        items =
+            if state.isOpen then
+                column options.listAttributes (List.map (viewItem options) data)
+
+            else
+                none
 
         mainAttr =
             case data of
                 [] ->
-                    config.disabledAttributes ++ config.inputAttributes
+                    options.disabledAttributes ++ options.inputAttributes
 
                 _ ->
-                    onClick config.clickedMsg :: config.inputAttributes
+                    onClick options.clickedMsg :: options.inputAttributes
     in
     column
-        config.containerAttributes
+        options.containerAttributes
         [ row
             mainAttr
-            [ el config.textAttributes (text mainText)
+            [ el options.textAttributes (text mainText)
             , el [] (text "▾")
             ]
-        , if context.isOpen then
-            column config.listAttributes (List.map (viewItem config) data)
-
-          else
-            none
+        , el [ width fill, inFront items ] none
         ]
 
 
-viewItem : Config msg -> String -> Element msg
-viewItem config item =
+viewItem : Options msg -> String -> Element msg
+viewItem options item =
     let
         attrs =
-            (onClick <| config.itemPickedMsg item)
-                :: config.listItemAttributes
+            (onClick <| options.itemPickedMsg item)
+                :: options.listItemAttributes
     in
     el attrs (text item)
 

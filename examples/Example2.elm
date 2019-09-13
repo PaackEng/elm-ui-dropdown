@@ -1,8 +1,10 @@
-module Example1 exposing (..)
+module Example2 exposing (..)
 
 import Browser
 import Dropdown
 import Element exposing (..)
+import Element.Border as Border
+import Element.Font as Font
 import Html exposing (Html)
 
 
@@ -80,9 +82,29 @@ view model =
             , isOpen = model.isOpen
             }
 
+        containerAttrs =
+            [ centerX, centerY ]
+
+        inputAttrs =
+            [ Border.width 1, Border.rounded 5, paddingXY 16 8 ]
+
+        textAttrs =
+            [ paddingXY 8 0 ]
+
+        listAttrs =
+            [ Border.width 1, width fill, spacing 5 ]
+
+        listItemAttrs =
+            [ Font.size 16, centerX, padding 8 ]
+
         dropdown =
             Dropdown.config ToggleDropdown OptionPicked
+                |> Dropdown.withContainerAttributes containerAttrs
+                |> Dropdown.withInputAttributes inputAttrs
+                |> Dropdown.withTextAttributes textAttrs
+                |> Dropdown.withListAttributes listAttrs
+                |> Dropdown.withListItemAttributes listItemAttrs
                 |> Dropdown.toEl state options
     in
-    el [] dropdown
+    el [ width fill, height fill, padding 20 ] dropdown
         |> layout []
