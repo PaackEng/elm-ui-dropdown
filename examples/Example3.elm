@@ -185,7 +185,7 @@ view model =
             Dropdown.basic (Toggle CountryDropDown) CountryPicked
                 |> Dropdown.withPromptText "Select country"
                 |> Dropdown.withContainerAttributes containerAttrs
-                |> Dropdown.withInputAttributes inputAttrs
+                |> Dropdown.withHeadAttributes inputAttrs
                 |> Dropdown.withSearchAttributes searchAttrs
                 |> Dropdown.withTextAttributes textAttrs
                 |> Dropdown.withListAttributes listAttrs
@@ -196,7 +196,7 @@ view model =
             Dropdown.basic (Toggle CityDropDown) CityPicked
                 |> Dropdown.withPromptText "Select city"
                 |> Dropdown.withContainerAttributes containerAttrs
-                |> Dropdown.withInputAttributes inputAttrs
+                |> Dropdown.withHeadAttributes inputAttrs
                 |> Dropdown.withSearchAttributes searchAttrs
                 |> Dropdown.withTextAttributes textAttrs
                 |> Dropdown.withListAttributes listAttrs

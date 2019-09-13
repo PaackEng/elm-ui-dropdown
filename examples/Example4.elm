@@ -3,6 +3,10 @@ module Example1 exposing (..)
 import Browser
 import Dropdown
 import Element exposing (..)
+import Element.Background as Background
+import Element.Border as Border
+import Element.Events as Events
+import Element.Font as Font
 import Html exposing (Html)
 
 
@@ -18,6 +22,7 @@ main =
 type alias Model =
     { selectedOption : Maybe String
     , isOpen : Bool
+    , options : List String
     }
 
 
@@ -25,14 +30,11 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     ( { selectedOption = Nothing
       , isOpen = False
+      , options =
+            [ "Option 1", "Option 2", "Option 3" ]
       }
     , Cmd.none
     )
-
-
-options : List String
-options =
-    [ "Option 1", "Option 2", "Option 3" ]
 
 
 
@@ -42,6 +44,7 @@ options =
 type Msg
     = ToggleDropdown
     | OptionPicked String
+    | RemoveOptions
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -57,6 +60,9 @@ update msg model =
               }
             , Cmd.none
             )
+
+        RemoveOptions ->
+            ( { model | options = [] }, Cmd.none )
 
 
 
@@ -81,9 +87,32 @@ view model =
             , filterText = ""
             }
 
+        disabledAttrs =
+            [ Border.color gray, Border.width 1, Font.color gray, padding 12 ]
+
+        inputAttrs =
+            [ Border.color black, Border.width 2, Font.color black, padding 12 ]
+
         dropdown =
             Dropdown.basic ToggleDropdown OptionPicked
-                |> Dropdown.toEl state options
+                |> Dropdown.withHeadAttributes inputAttrs
+                |> Dropdown.withDisabledAttributes disabledAttrs
+                |> Dropdown.toEl state model.options
     in
-    el [] dropdown
+    row [ spacing 15, padding 40, Background.color gainsboro ]
+        [ el [] dropdown
+        , el [ Events.onClick RemoveOptions ] (text "Remove options")
+        ]
         |> layout []
+
+
+black =
+    rgb255 0 0 0
+
+
+gray =
+    rgb255 105 105 105
+
+
+gainsboro =
+    rgb255 220 220 220

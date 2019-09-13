@@ -117,7 +117,7 @@ view model =
         dropdown =
             Dropdown.filterable ToggleDropdown FilterChanged OptionPicked
                 |> Dropdown.withContainerAttributes containerAttrs
-                |> Dropdown.withInputAttributes inputAttrs
+                |> Dropdown.withHeadAttributes inputAttrs
                 |> Dropdown.withSearchAttributes searchAttrs
                 |> Dropdown.withTextAttributes textAttrs
                 |> Dropdown.withListAttributes listAttrs

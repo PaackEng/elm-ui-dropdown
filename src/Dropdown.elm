@@ -1,4 +1,4 @@
-module Dropdown exposing (Dropdown, State, basic, filterable, toEl, withContainerAttributes, withDisabledAttributes, withInputAttributes, withListAttributes, withListItemAttributes, withPromptText, withSearchAttributes, withTextAttributes)
+module Dropdown exposing (Dropdown, State, basic, filterable, toEl, withContainerAttributes, withDisabledAttributes, withHeadAttributes, withListAttributes, withListItemAttributes, withPromptText, withSearchAttributes, withTextAttributes)
 
 import Element exposing (..)
 import Element.Events as Events
@@ -20,7 +20,7 @@ type alias Options msg =
     , itemPickedMsg : String -> msg
     , containerAttributes : List (Attribute msg)
     , disabledAttributes : List (Attribute msg)
-    , inputAttributes : List (Attribute msg)
+    , headAttributes : List (Attribute msg)
     , searchAttributes : List (Attribute msg)
     , textAttributes : List (Attribute msg)
     , listAttributes : List (Attribute msg)
@@ -42,7 +42,7 @@ basic clickedMsg itemPickedMsg =
         , itemPickedMsg = itemPickedMsg
         , containerAttributes = []
         , disabledAttributes = []
-        , inputAttributes = []
+        , headAttributes = []
         , searchAttributes = []
         , textAttributes = []
         , listAttributes = []
@@ -60,7 +60,7 @@ filterable clickedMsg searchMsg itemPickedMsg =
         , itemPickedMsg = itemPickedMsg
         , containerAttributes = []
         , disabledAttributes = []
-        , inputAttributes = []
+        , headAttributes = []
         , searchAttributes = []
         , textAttributes = []
         , listAttributes = []
@@ -83,9 +83,9 @@ withDisabledAttributes attrs (Dropdown options) =
     Dropdown { options | disabledAttributes = attrs }
 
 
-withInputAttributes : List (Attribute msg) -> Dropdown msg -> Dropdown msg
-withInputAttributes attrs (Dropdown options) =
-    Dropdown { options | inputAttributes = attrs }
+withHeadAttributes : List (Attribute msg) -> Dropdown msg -> Dropdown msg
+withHeadAttributes attrs (Dropdown options) =
+    Dropdown { options | headAttributes = attrs }
 
 
 withSearchAttributes : List (Attribute msg) -> Dropdown msg -> Dropdown msg
@@ -118,10 +118,10 @@ toEl state data (Dropdown options) =
         headAttrs =
             case data of
                 [] ->
-                    options.disabledAttributes ++ options.inputAttributes
+                    options.headAttributes ++ options.disabledAttributes
 
                 _ ->
-                    options.inputAttributes
+                    options.headAttributes
 
         prompt =
             el (onClick options.clickedMsg :: options.textAttributes) (text mainText)
