@@ -115,7 +115,7 @@ view model =
             options |> List.filter (String.contains model.filterText)
 
         dropdown =
-            Dropdown.config ToggleDropdown FilterChanged OptionPicked
+            Dropdown.filterable ToggleDropdown FilterChanged OptionPicked
                 |> Dropdown.withContainerAttributes containerAttrs
                 |> Dropdown.withInputAttributes inputAttrs
                 |> Dropdown.withSearchAttributes searchAttrs

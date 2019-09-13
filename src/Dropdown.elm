@@ -1,4 +1,4 @@
-module Dropdown exposing (Dropdown, State, config, toEl, withContainerAttributes, withDisabledAttributes, withInputAttributes, withListAttributes, withListItemAttributes, withPromptText, withSearchAttributes, withTextAttributes)
+module Dropdown exposing (Dropdown, State, basic, filterable, toEl, withContainerAttributes, withDisabledAttributes, withInputAttributes, withListAttributes, withListItemAttributes, withPromptText, withSearchAttributes, withTextAttributes)
 
 import Element exposing (..)
 import Element.Events as Events
@@ -16,7 +16,7 @@ type alias Options msg =
     { promptText : String
     , filterPlaceholder : String
     , clickedMsg : msg
-    , searchMsg : String -> msg
+    , searchMsg : Maybe (String -> msg)
     , itemPickedMsg : String -> msg
     , containerAttributes : List (Attribute msg)
     , disabledAttributes : List (Attribute msg)
@@ -32,13 +32,31 @@ type Dropdown msg
     = Dropdown (Options msg)
 
 
-config : msg -> (String -> msg) -> (String -> msg) -> Dropdown msg
-config clickedMsg searchMsg itemPickedMsg =
+basic : msg -> (String -> msg) -> Dropdown msg
+basic clickedMsg itemPickedMsg =
     Dropdown
         { promptText = "-- Select --"
         , filterPlaceholder = "Filter values"
         , clickedMsg = clickedMsg
-        , searchMsg = searchMsg
+        , searchMsg = Nothing
+        , itemPickedMsg = itemPickedMsg
+        , containerAttributes = []
+        , disabledAttributes = []
+        , inputAttributes = []
+        , searchAttributes = []
+        , textAttributes = []
+        , listAttributes = []
+        , listItemAttributes = []
+        }
+
+
+filterable : msg -> (String -> msg) -> (String -> msg) -> Dropdown msg
+filterable clickedMsg searchMsg itemPickedMsg =
+    Dropdown
+        { promptText = "-- Select --"
+        , filterPlaceholder = "Filter values"
+        , clickedMsg = clickedMsg
+        , searchMsg = Just searchMsg
         , itemPickedMsg = itemPickedMsg
         , containerAttributes = []
         , disabledAttributes = []
@@ -109,12 +127,17 @@ toEl state data (Dropdown options) =
             el (onClick options.clickedMsg :: options.textAttributes) (text mainText)
 
         search =
-            Input.search options.searchAttributes
-                { onChange = options.searchMsg
-                , text = state.filterText
-                , placeholder = Just <| Input.placeholder [] (text options.filterPlaceholder)
-                , label = Input.labelHidden "Filter List"
-                }
+            case options.searchMsg of
+                Just searchMsg ->
+                    Input.search options.searchAttributes
+                        { onChange = searchMsg
+                        , text = state.filterText
+                        , placeholder = Just <| Input.placeholder [] (text options.filterPlaceholder)
+                        , label = Input.labelHidden "Filter List"
+                        }
+
+                Nothing ->
+                    prompt
 
         ( head, body ) =
             if state.isOpen then

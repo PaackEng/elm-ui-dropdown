@@ -44,7 +44,6 @@ options =
 type Msg
     = ToggleDropdown
     | OptionPicked String
-    | FilterChanged String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -60,9 +59,6 @@ update msg model =
               }
             , Cmd.none
             )
-
-        FilterChanged val ->
-            ( { model | filterText = val }, Cmd.none )
 
 
 
@@ -91,7 +87,7 @@ view model =
             options |> List.filter (String.contains model.filterText)
 
         dropdown =
-            Dropdown.config ToggleDropdown FilterChanged OptionPicked
+            Dropdown.basic ToggleDropdown OptionPicked
                 |> Dropdown.toEl state data
     in
     el [] dropdown
