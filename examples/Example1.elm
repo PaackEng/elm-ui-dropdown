@@ -16,15 +16,13 @@ main =
 
 
 type alias Model =
-    { selectedOption : Maybe String
-    , isOpen : Bool
+    { dropdownState : Dropdown.State String
     }
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { selectedOption = Nothing
-      , isOpen = False
+    ( { dropdownState = Dropdown.init
       }
     , Cmd.none
     )
@@ -40,16 +38,13 @@ options =
 
 
 type Msg
-    = ToggleDropdown
-    | OptionPicked String
+    = OptionPicked String
+    | DropdownMsg (Dropdown.Msg String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ToggleDropdown ->
-            ( { model | isOpen = not model.isOpen }, Cmd.none )
-
         OptionPicked option ->
             ( { model
                 | selectedOption = Just option
@@ -57,6 +52,9 @@ update msg model =
               }
             , Cmd.none
             )
+
+        DropdownMsg subMsg ->
+            Dropdown.update dropdownConfig subMsg model.dropdownState
 
 
 
@@ -77,14 +75,14 @@ view model =
     let
         state =
             { selectedItem = model.selectedOption
-            , isOpen = model.isOpen
             , filterText = ""
             }
-
-        config =
-            Dropdown.basic ToggleDropdown OptionPicked
-                |> Dropdown.withItemToElement Element.text
     in
-    Dropdown.view config state options
+    Dropdown.view dropdownConfig state options
         |> el []
         |> layout []
+
+
+dropdownConfig =
+    Dropdown.basic ToggleDropdown OptionPicked
+        |> Dropdown.withItemToElement Element.text

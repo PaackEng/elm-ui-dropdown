@@ -1,42 +1,69 @@
-module Dropdown exposing (Dropdown, State, basic, filterable, view, withContainerAttributes, withDisabledAttributes, withHeadAttributes, withItemToElement, withListAttributes, withOpenCloseButtons, withPromptText, withSearchAttributes, withTextAttributes)
+module Dropdown exposing (Config, Msg, State, basic, filterable, init, update, view, withContainerAttributes, withDisabledAttributes, withHeadAttributes, withItemToElement, withListAttributes, withOpenCloseButtons, withPromptText, withSearchAttributes, withTextAttributes)
 
 import Element exposing (..)
 import Element.Events as Events
 import Element.Input as Input
+import Task
 
 
-type alias State =
-    { selectedItem : Maybe String
-    , isOpen : Bool
-    , filterText : String
-    }
+type State item
+    = State
+        { selectedItem : Maybe item
+        , isOpen : Bool
+        , filterText : String
+        }
 
 
-type alias Options item msg =
-    { promptText : String
-    , filterPlaceholder : String
-    , clickedMsg : msg
-    , searchMsg : Maybe (String -> msg)
-    , itemPickedMsg : item -> msg
-    , containerAttributes : List (Attribute msg)
-    , disabledAttributes : List (Attribute msg)
-    , headAttributes : List (Attribute msg)
-    , searchAttributes : List (Attribute msg)
-    , textAttributes : List (Attribute msg)
-    , listAttributes : List (Attribute msg)
-    , itemToElement : item -> Element msg
-    , openButton : Element msg
-    , closeButton : Element msg
-    }
+type Config item msg
+    = Config
+        { promptText : String
+        , filterPlaceholder : String
+        , clickedMsg : msg
+        , searchMsg : Maybe (String -> msg)
+        , itemPickedMsg : Maybe item -> msg
+        , containerAttributes : List (Attribute msg)
+        , disabledAttributes : List (Attribute msg)
+        , headAttributes : List (Attribute msg)
+        , searchAttributes : List (Attribute msg)
+        , textAttributes : List (Attribute msg)
+        , listAttributes : List (Attribute msg)
+        , itemToElement : item -> Element msg
+        , openButton : Element msg
+        , closeButton : Element msg
+        , itemToPrompt : item -> String
+        }
 
 
-type Dropdown item msg
-    = Dropdown (Options item msg)
+type Msg item
+    = NoOp
+    | OnBlur
+    | OnClear
+    | OnClickPrompt
+    | OnEsc
+    | OnSelect item
 
 
-basic : msg -> (item -> msg) -> Dropdown item msg
+type Key
+    = KeyOther
+    | KeyArrowDown
+    | KeyArrowUp
+    | KeyEnter
+    | KeyEsc
+    | KeySpace
+
+
+init : State item
+init =
+    State
+        { selectedItem = Nothing
+        , isOpen = False
+        , filterText = ""
+        }
+
+
+basic : msg -> (Maybe item -> msg) -> Config item msg
 basic clickedMsg itemPickedMsg =
-    Dropdown
+    Config
         { promptText = "-- Select --"
         , filterPlaceholder = "Filter values"
         , clickedMsg = clickedMsg
@@ -51,12 +78,13 @@ basic clickedMsg itemPickedMsg =
         , itemToElement = \_ -> none
         , openButton = text "▼"
         , closeButton = text "▲"
+        , itemToPrompt = \_ -> ""
         }
 
 
-filterable : msg -> (String -> msg) -> (item -> msg) -> Dropdown item msg
+filterable : msg -> (String -> msg) -> (Maybe item -> msg) -> Config item msg
 filterable clickedMsg searchMsg itemPickedMsg =
-    Dropdown
+    Config
         { promptText = "-- Select --"
         , filterPlaceholder = "Filter values"
         , clickedMsg = clickedMsg
@@ -71,83 +99,125 @@ filterable clickedMsg searchMsg itemPickedMsg =
         , itemToElement = \_ -> none
         , openButton = text "▼"
         , closeButton = text "▲"
+        , itemToPrompt = \_ -> ""
         }
 
 
-withPromptText : String -> Dropdown item msg -> Dropdown item msg
-withPromptText promptText (Dropdown options) =
-    Dropdown { options | promptText = promptText }
+withPromptText : String -> Config item msg -> Config item msg
+withPromptText promptText (Config config) =
+    Config { config | promptText = promptText }
 
 
-withContainerAttributes : List (Attribute msg) -> Dropdown item msg -> Dropdown item msg
-withContainerAttributes attrs (Dropdown options) =
-    Dropdown { options | containerAttributes = attrs }
+withContainerAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withContainerAttributes attrs (Config config) =
+    Config { config | containerAttributes = attrs }
 
 
-withDisabledAttributes : List (Attribute msg) -> Dropdown item msg -> Dropdown item msg
-withDisabledAttributes attrs (Dropdown options) =
-    Dropdown { options | disabledAttributes = attrs }
+withDisabledAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withDisabledAttributes attrs (Config config) =
+    Config { config | disabledAttributes = attrs }
 
 
-withHeadAttributes : List (Attribute msg) -> Dropdown item msg -> Dropdown item msg
-withHeadAttributes attrs (Dropdown options) =
-    Dropdown { options | headAttributes = attrs }
+withHeadAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withHeadAttributes attrs (Config config) =
+    Config { config | headAttributes = attrs }
 
 
-withSearchAttributes : List (Attribute msg) -> Dropdown item msg -> Dropdown item msg
-withSearchAttributes attrs (Dropdown options) =
-    Dropdown { options | searchAttributes = attrs }
+withSearchAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withSearchAttributes attrs (Config config) =
+    Config { config | searchAttributes = attrs }
 
 
-withTextAttributes : List (Attribute msg) -> Dropdown item msg -> Dropdown item msg
-withTextAttributes attrs (Dropdown options) =
-    Dropdown { options | textAttributes = attrs }
+withTextAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withTextAttributes attrs (Config config) =
+    Config { config | textAttributes = attrs }
 
 
-withListAttributes : List (Attribute msg) -> Dropdown item msg -> Dropdown item msg
-withListAttributes attrs (Dropdown options) =
-    Dropdown { options | listAttributes = attrs }
+withListAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withListAttributes attrs (Config config) =
+    Config { config | listAttributes = attrs }
 
 
-withItemToElement : (item -> Element msg) -> Dropdown item msg -> Dropdown item msg
-withItemToElement itemToElement (Dropdown options) =
-    Dropdown { options | itemToElement = itemToElement }
+withItemToElement : (item -> Element msg) -> Config item msg -> Config item msg
+withItemToElement itemToElement (Config config) =
+    Config { config | itemToElement = itemToElement }
 
 
-withOpenCloseButtons : { openButton : Element msg, closeButton : Element msg } -> Dropdown item msg -> Dropdown item msg
-withOpenCloseButtons { openButton, closeButton } (Dropdown options) =
-    Dropdown { options | openButton = openButton, closeButton = closeButton }
+withOpenCloseButtons : { openButton : Element msg, closeButton : Element msg } -> Config item msg -> Config item msg
+withOpenCloseButtons { openButton, closeButton } (Config config) =
+    Config { config | openButton = openButton, closeButton = closeButton }
+
+
+
+-- Update
+
+
+update : Config item msg -> Msg item -> State item -> ( State item, Cmd msg )
+update (Config config) msg (State state) =
+    let
+        ( newState, newCommand ) =
+            case msg of
+                NoOp ->
+                    ( state, Cmd.none )
+
+                OnBlur ->
+                    ( { state | isOpen = False }, Cmd.none )
+
+                OnClear ->
+                    let
+                        cmd =
+                            Task.succeed Nothing
+                                |> Task.perform config.itemPickedMsg
+                    in
+                    ( { state | isOpen = False, selectedItem = Nothing }, cmd )
+
+                OnClickPrompt ->
+                    ( { state | isOpen = not state.isOpen }, Cmd.none )
+
+                OnEsc ->
+                    ( { state | isOpen = False }, Cmd.none )
+
+                OnSelect item ->
+                    let
+                        cmd =
+                            Task.succeed (Just item)
+                                |> Task.perform config.itemPickedMsg
+                    in
+                    ( { state | isOpen = False, selectedItem = Just item }, cmd )
+    in
+    ( State newState, newCommand )
 
 
 
 -- View
 
 
-view : Dropdown item msg -> State -> List item -> Element msg
-view (Dropdown options) state data =
+view : Config item msg -> State item -> List item -> Element msg
+view (Config config) (State state) data =
     let
         mainText =
             state.selectedItem
-                |> Maybe.withDefault options.promptText
+                |> Maybe.map config.itemToPrompt
+                |> Maybe.withDefault config.promptText
 
         headAttrs =
             case data of
                 [] ->
-                    options.headAttributes ++ options.disabledAttributes
+                    config.headAttributes ++ config.disabledAttributes
 
                 _ ->
-                    options.headAttributes
+                    config.headAttributes
 
         prompt =
-            el (onClick options.clickedMsg :: options.textAttributes) (text mainText)
+            el (onClick config.clickedMsg :: config.textAttributes) (text mainText)
 
         search =
-            case options.searchMsg of
+            case config.searchMsg of
                 Just searchMsg ->
-                    Input.search options.searchAttributes
+                    Input.search config.searchAttributes
                         { onChange = searchMsg
                         , text = state.filterText
-                        , placeholder = Just <| Input.placeholder [] (text options.filterPlaceholder)
+                        , placeholder = Just <| Input.placeholder [] (text config.filterPlaceholder)
                         , label = Input.labelHidden "Filter List"
                         }
 
@@ -160,29 +230,31 @@ view (Dropdown options) state data =
                     el [] b
 
                 _ ->
-                    el [ onClick options.clickedMsg ] b
+                    el [ onClick config.clickedMsg ] b
 
         ( head, button, body ) =
             if state.isOpen then
                 let
+                    itemView item =
+                        el
+                            [ onClick <| config.itemPickedMsg <| Just item
+                            , width fill
+                            ]
+                            (config.itemToElement item)
+
                     items =
-                        column options.listAttributes (List.map (itemView options) data)
+                        column config.listAttributes (List.map itemView data)
                 in
-                ( search, openCloseButton options.closeButton, el [ width fill, inFront items ] none )
+                ( search, openCloseButton config.closeButton, el [ width fill, inFront items ] none )
 
             else
-                ( prompt, openCloseButton options.openButton, none )
+                ( prompt, openCloseButton config.openButton, none )
     in
     column
-        options.containerAttributes
+        config.containerAttributes
         [ row headAttrs [ head, button ]
         , body
         ]
-
-
-itemView : Options item msg -> item -> Element msg
-itemView { itemPickedMsg, itemToElement } item =
-    el [ onClick (itemPickedMsg item), width fill ] (itemToElement item)
 
 
 
