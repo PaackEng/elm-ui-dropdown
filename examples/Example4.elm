@@ -93,14 +93,14 @@ view model =
         inputAttrs =
             [ Border.color black, Border.width 2, Font.color black, padding 12 ]
 
-        dropdown =
+        config =
             Dropdown.basic ToggleDropdown OptionPicked
+                |> Dropdown.withItemToElement Element.text
                 |> Dropdown.withHeadAttributes inputAttrs
                 |> Dropdown.withDisabledAttributes disabledAttrs
-                |> Dropdown.toEl state model.options
     in
     row [ spacing 15, padding 40, Background.color gainsboro ]
-        [ el [] dropdown
+        [ el [] (Dropdown.view config state model.options)
         , el [ Events.onClick RemoveOptions ] (text "Remove options")
         ]
         |> layout []

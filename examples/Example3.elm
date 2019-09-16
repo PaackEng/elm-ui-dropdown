@@ -178,32 +178,32 @@ view model =
             , spacing 5
             ]
 
-        listItemAttrs =
-            [ Font.size 16, Font.center, padding 8, width fill ]
+        itemToElement i =
+            el [ Font.size 16, Font.center, padding 8, width fill ] (text i)
 
-        countryDropdown =
+        countryConfig =
             Dropdown.basic (Toggle CountryDropDown) CountryPicked
                 |> Dropdown.withPromptText "Select country"
+                |> Dropdown.withItemToElement itemToElement
                 |> Dropdown.withContainerAttributes containerAttrs
                 |> Dropdown.withHeadAttributes inputAttrs
                 |> Dropdown.withSearchAttributes searchAttrs
                 |> Dropdown.withTextAttributes textAttrs
                 |> Dropdown.withListAttributes listAttrs
-                |> Dropdown.withListItemAttributes listItemAttrs
-                |> Dropdown.toEl countryState countries
 
-        cityDropdown =
+        cityConfig =
             Dropdown.basic (Toggle CityDropDown) CityPicked
                 |> Dropdown.withPromptText "Select city"
+                |> Dropdown.withItemToElement itemToElement
                 |> Dropdown.withContainerAttributes containerAttrs
                 |> Dropdown.withHeadAttributes inputAttrs
                 |> Dropdown.withSearchAttributes searchAttrs
                 |> Dropdown.withTextAttributes textAttrs
                 |> Dropdown.withListAttributes listAttrs
-                |> Dropdown.withListItemAttributes listItemAttrs
-                |> Dropdown.toEl cityState cities
     in
-    [ countryDropdown, cityDropdown ]
-        |> row []
+    row []
+        [ Dropdown.view countryConfig countryState countries
+        , Dropdown.view cityConfig cityState cities
+        ]
         |> el [ width fill, height fill, padding 20 ]
         |> layout []

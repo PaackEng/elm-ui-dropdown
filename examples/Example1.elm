@@ -81,9 +81,10 @@ view model =
             , filterText = ""
             }
 
-        dropdown =
+        config =
             Dropdown.basic ToggleDropdown OptionPicked
-                |> Dropdown.toEl state options
+                |> Dropdown.withItemToElement Element.text
     in
-    el [] dropdown
+    Dropdown.view config state options
+        |> el []
         |> layout []

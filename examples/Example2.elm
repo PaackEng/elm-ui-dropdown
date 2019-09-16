@@ -3,6 +3,7 @@ module Example2 exposing (..)
 import Browser
 import Dropdown
 import Element exposing (..)
+import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Html exposing (Html)
@@ -108,21 +109,24 @@ view model =
             , spacing 5
             ]
 
-        listItemAttrs =
-            [ Font.size 16, centerX, padding 8 ]
+        itemToElement i =
+            row [ padding 8, spacing 10, width fill ]
+                [ el [] (text "-")
+                , el [ Font.size 16 ] (text i)
+                ]
 
         data =
             options |> List.filter (String.contains model.filterText)
 
-        dropdown =
+        config =
             Dropdown.filterable ToggleDropdown FilterChanged OptionPicked
+                |> Dropdown.withItemToElement itemToElement
                 |> Dropdown.withContainerAttributes containerAttrs
                 |> Dropdown.withHeadAttributes inputAttrs
                 |> Dropdown.withSearchAttributes searchAttrs
                 |> Dropdown.withTextAttributes textAttrs
                 |> Dropdown.withListAttributes listAttrs
-                |> Dropdown.withListItemAttributes listItemAttrs
-                |> Dropdown.toEl state data
     in
-    el [ width fill, height fill, padding 20 ] dropdown
+    Dropdown.view config state data
+        |> el [ width fill, height fill, padding 20 ]
         |> layout []
