@@ -19,17 +19,15 @@ main =
 
 
 type alias Model =
-    { selectedOption : Maybe String
-    , isOpen : Bool
-    , filterText : String
+    { dropdownState : Dropdown.State String
+    , selectedOption : Maybe String
     }
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { selectedOption = Nothing
-      , isOpen = False
-      , filterText = ""
+    ( { dropdownState = Dropdown.init
+      , selectedOption = Nothing
       }
     , Cmd.none
     )
@@ -45,27 +43,22 @@ options =
 
 
 type Msg
-    = ToggleDropdown
-    | OptionPicked String
-    | FilterChanged String
+    = OptionPicked (Maybe String)
+    | DropdownMsg (Dropdown.Msg String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ToggleDropdown ->
-            ( { model | isOpen = not model.isOpen }, Cmd.none )
-
         OptionPicked option ->
-            ( { model
-                | selectedOption = Just option
-                , isOpen = False
-              }
-            , Cmd.none
-            )
+            ( { model | selectedOption = option }, Cmd.none )
 
-        FilterChanged val ->
-            ( { model | filterText = val }, Cmd.none )
+        DropdownMsg subMsg ->
+            let
+                ( state, cmd ) =
+                    Dropdown.update dropdownConfig subMsg model.dropdownState
+            in
+            ( { model | dropdownState = state }, cmd )
 
 
 
@@ -83,13 +76,14 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    let
-        state =
-            { selectedItem = model.selectedOption
-            , isOpen = model.isOpen
-            , filterText = model.filterText
-            }
+    Dropdown.view dropdownConfig model.dropdownState options
+        |> el [ width fill, height fill, padding 20 ]
+        |> layout []
 
+
+dropdownConfig : Dropdown.Config String Msg
+dropdownConfig =
+    let
         containerAttrs =
             [ width (px 300), centerX, centerY ]
 
@@ -110,23 +104,21 @@ view model =
             ]
 
         itemToElement i =
-            row [ padding 8, spacing 10, width fill ]
+            row
+                [ mouseOver [ Background.color (rgb255 128 128 128) ]
+                , padding 8
+                , spacing 10
+                , width fill
+                ]
                 [ el [] (text "-")
                 , el [ Font.size 16 ] (text i)
                 ]
-
-        data =
-            options |> List.filter (String.contains model.filterText)
-
-        config =
-            Dropdown.filterable ToggleDropdown FilterChanged OptionPicked
-                |> Dropdown.withItemToElement itemToElement
-                |> Dropdown.withContainerAttributes containerAttrs
-                |> Dropdown.withHeadAttributes inputAttrs
-                |> Dropdown.withSearchAttributes searchAttrs
-                |> Dropdown.withTextAttributes textAttrs
-                |> Dropdown.withListAttributes listAttrs
     in
-    Dropdown.view config state data
-        |> el [ width fill, height fill, padding 20 ]
-        |> layout []
+    Dropdown.filterable DropdownMsg OptionPicked
+        |> Dropdown.withItemToPrompt identity
+        |> Dropdown.withItemToElement itemToElement
+        |> Dropdown.withContainerAttributes containerAttrs
+        |> Dropdown.withHeadAttributes inputAttrs
+        |> Dropdown.withSearchAttributes searchAttrs
+        |> Dropdown.withTextAttributes textAttrs
+        |> Dropdown.withListAttributes listAttrs

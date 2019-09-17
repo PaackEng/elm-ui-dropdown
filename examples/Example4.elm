@@ -20,16 +20,16 @@ main =
 
 
 type alias Model =
-    { selectedOption : Maybe String
-    , isOpen : Bool
+    { dropdownState : Dropdown.State String
+    , selectedOption : Maybe String
     , options : List String
     }
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { selectedOption = Nothing
-      , isOpen = False
+    ( { dropdownState = Dropdown.init
+      , selectedOption = Nothing
       , options =
             [ "Option 1", "Option 2", "Option 3" ]
       }
@@ -42,24 +42,23 @@ init _ =
 
 
 type Msg
-    = ToggleDropdown
-    | OptionPicked String
+    = OptionPicked (Maybe String)
+    | DropdownMsg (Dropdown.Msg String)
     | RemoveOptions
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ToggleDropdown ->
-            ( { model | isOpen = not model.isOpen }, Cmd.none )
-
         OptionPicked option ->
-            ( { model
-                | selectedOption = Just option
-                , isOpen = False
-              }
-            , Cmd.none
-            )
+            ( { model | selectedOption = option }, Cmd.none )
+
+        DropdownMsg subMsg ->
+            let
+                ( state, cmd ) =
+                    Dropdown.update dropdownConfig subMsg model.dropdownState
+            in
+            ( { model | dropdownState = state }, cmd )
 
         RemoveOptions ->
             ( { model | options = [] }, Cmd.none )
@@ -80,27 +79,8 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    let
-        state =
-            { selectedItem = model.selectedOption
-            , isOpen = model.isOpen
-            , filterText = ""
-            }
-
-        disabledAttrs =
-            [ Border.color gray, Border.width 1, Font.color gray, padding 12 ]
-
-        inputAttrs =
-            [ Border.color black, Border.width 2, Font.color black, padding 12 ]
-
-        config =
-            Dropdown.basic ToggleDropdown OptionPicked
-                |> Dropdown.withItemToElement Element.text
-                |> Dropdown.withHeadAttributes inputAttrs
-                |> Dropdown.withDisabledAttributes disabledAttrs
-    in
     row [ spacing 15, padding 40, Background.color gainsboro ]
-        [ el [] (Dropdown.view config state model.options)
+        [ el [] (Dropdown.view dropdownConfig model.dropdownState model.options)
         , el [ Events.onClick RemoveOptions ] (text "Remove options")
         ]
         |> layout []
@@ -116,3 +96,19 @@ gray =
 
 gainsboro =
     rgb255 220 220 220
+
+
+dropdownConfig : Dropdown.Config String Msg
+dropdownConfig =
+    let
+        disabledAttrs =
+            [ Border.color gray, Border.width 1, Font.color gray, padding 12 ]
+
+        inputAttrs =
+            [ Border.color black, Border.width 2, Font.color black, padding 12 ]
+    in
+    Dropdown.basic DropdownMsg OptionPicked
+        |> Dropdown.withItemToPrompt identity
+        |> Dropdown.withItemToElement Element.text
+        |> Dropdown.withHeadAttributes inputAttrs
+        |> Dropdown.withDisabledAttributes disabledAttrs

@@ -1,9 +1,14 @@
-module Dropdown exposing (Config, Msg, State, basic, filterable, init, update, view, withContainerAttributes, withDisabledAttributes, withHeadAttributes, withItemToElement, withListAttributes, withOpenCloseButtons, withPromptText, withSearchAttributes, withTextAttributes)
+module Dropdown exposing (Config, Msg, State, basic, filterable, init, update, view, withContainerAttributes, withDisabledAttributes, withHeadAttributes, withItemToElement, withItemToPrompt, withListAttributes, withOpenCloseButtons, withPromptText, withSearchAttributes, withTextAttributes)
 
 import Element exposing (..)
 import Element.Events as Events
 import Element.Input as Input
 import Task
+
+
+type DropdownType
+    = Basic
+    | Filterable
 
 
 type State item
@@ -16,10 +21,10 @@ type State item
 
 type Config item msg
     = Config
-        { promptText : String
+        { dropdownType : DropdownType
+        , promptText : String
         , filterPlaceholder : String
-        , clickedMsg : msg
-        , searchMsg : Maybe (String -> msg)
+        , dropdownMsg : Msg item -> msg
         , itemPickedMsg : Maybe item -> msg
         , containerAttributes : List (Attribute msg)
         , disabledAttributes : List (Attribute msg)
@@ -41,6 +46,7 @@ type Msg item
     | OnClickPrompt
     | OnEsc
     | OnSelect item
+    | OnFilterTyped String
 
 
 type Key
@@ -61,13 +67,13 @@ init =
         }
 
 
-basic : msg -> (Maybe item -> msg) -> Config item msg
-basic clickedMsg itemPickedMsg =
+basic : (Msg item -> msg) -> (Maybe item -> msg) -> Config item msg
+basic dropdownMsg itemPickedMsg =
     Config
-        { promptText = "-- Select --"
+        { dropdownType = Basic
+        , promptText = "-- Select --"
         , filterPlaceholder = "Filter values"
-        , clickedMsg = clickedMsg
-        , searchMsg = Nothing
+        , dropdownMsg = dropdownMsg
         , itemPickedMsg = itemPickedMsg
         , containerAttributes = []
         , disabledAttributes = []
@@ -82,13 +88,13 @@ basic clickedMsg itemPickedMsg =
         }
 
 
-filterable : msg -> (String -> msg) -> (Maybe item -> msg) -> Config item msg
-filterable clickedMsg searchMsg itemPickedMsg =
+filterable : (Msg item -> msg) -> (Maybe item -> msg) -> Config item msg
+filterable dropdownMsg itemPickedMsg =
     Config
-        { promptText = "-- Select --"
+        { dropdownType = Filterable
+        , promptText = "-- Select --"
         , filterPlaceholder = "Filter values"
-        , clickedMsg = clickedMsg
-        , searchMsg = Just searchMsg
+        , dropdownMsg = dropdownMsg
         , itemPickedMsg = itemPickedMsg
         , containerAttributes = []
         , disabledAttributes = []
@@ -143,6 +149,11 @@ withItemToElement itemToElement (Config config) =
     Config { config | itemToElement = itemToElement }
 
 
+withItemToPrompt : (item -> String) -> Config item msg -> Config item msg
+withItemToPrompt itemToPrompt (Config config) =
+    Config { config | itemToPrompt = itemToPrompt }
+
+
 withOpenCloseButtons : { openButton : Element msg, closeButton : Element msg } -> Config item msg -> Config item msg
 withOpenCloseButtons { openButton, closeButton } (Config config) =
     Config { config | openButton = openButton, closeButton = closeButton }
@@ -184,6 +195,9 @@ update (Config config) msg (State state) =
                                 |> Task.perform config.itemPickedMsg
                     in
                     ( { state | isOpen = False, selectedItem = Just item }, cmd )
+
+                OnFilterTyped val ->
+                    ( { state | filterText = val }, Cmd.none )
     in
     ( State newState, newCommand )
 
@@ -195,13 +209,20 @@ update (Config config) msg (State state) =
 view : Config item msg -> State item -> List item -> Element msg
 view (Config config) (State state) data =
     let
+        onClickMsg =
+            onClick (config.dropdownMsg OnClickPrompt)
+
         mainText =
             state.selectedItem
                 |> Maybe.map config.itemToPrompt
                 |> Maybe.withDefault config.promptText
 
+        filteredData =
+            data
+                |> List.filter (\i -> String.contains state.filterText (config.itemToPrompt i))
+
         headAttrs =
-            case data of
+            case filteredData of
                 [] ->
                     config.headAttributes ++ config.disabledAttributes
 
@@ -209,41 +230,41 @@ view (Config config) (State state) data =
                     config.headAttributes
 
         prompt =
-            el (onClick config.clickedMsg :: config.textAttributes) (text mainText)
+            el (onClickMsg :: config.textAttributes) (text mainText)
 
         search =
-            case config.searchMsg of
-                Just searchMsg ->
+            case config.dropdownType of
+                Basic ->
+                    prompt
+
+                Filterable ->
                     Input.search config.searchAttributes
-                        { onChange = searchMsg
+                        { onChange = config.dropdownMsg << OnFilterTyped
                         , text = state.filterText
                         , placeholder = Just <| Input.placeholder [] (text config.filterPlaceholder)
                         , label = Input.labelHidden "Filter List"
                         }
 
-                Nothing ->
-                    prompt
-
         openCloseButton b =
-            case data of
+            case filteredData of
                 [] ->
                     el [] b
 
                 _ ->
-                    el [ onClick config.clickedMsg ] b
+                    el [ onClickMsg ] b
 
         ( head, button, body ) =
             if state.isOpen then
                 let
                     itemView item =
                         el
-                            [ onClick <| config.itemPickedMsg <| Just item
+                            [ onClick <| config.dropdownMsg (OnSelect item)
                             , width fill
                             ]
                             (config.itemToElement item)
 
                     items =
-                        column config.listAttributes (List.map itemView data)
+                        column config.listAttributes (List.map itemView filteredData)
                 in
                 ( search, openCloseButton config.closeButton, el [ width fill, inFront items ] none )
 
