@@ -23,7 +23,7 @@ type alias Model =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { dropdownState = Dropdown.init
+    ( { dropdownState = Dropdown.init "dropdown"
       , selectedOption = Nothing
       }
     , Cmd.none
@@ -80,4 +80,4 @@ view model =
 
 dropdownConfig : Dropdown.Config String Msg
 dropdownConfig =
-    Dropdown.basic DropdownMsg OptionPicked Element.text
+    Dropdown.basic DropdownMsg OptionPicked (\_ item -> Element.text item)

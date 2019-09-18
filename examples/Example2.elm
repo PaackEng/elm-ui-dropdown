@@ -26,7 +26,7 @@ type alias Model =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { dropdownState = Dropdown.init
+    ( { dropdownState = Dropdown.init "dropdown"
       , selectedOption = Nothing
       }
     , Cmd.none
@@ -35,7 +35,7 @@ init _ =
 
 options : List String
 options =
-    [ "Option 1", "Option 2", "Option 3" ]
+    [ "Option 1", "Option 2", "Option 3", "Option 4", "Option 5", "Option 6" ]
 
 
 
@@ -76,8 +76,10 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    Dropdown.view dropdownConfig model.dropdownState options
-        |> el [ width fill, height fill, padding 20 ]
+    column [ width fill, height fill, padding 20 ]
+        [ el [] <| text <| "Selected Option: " ++ (model.selectedOption |> Maybe.withDefault "Nothing")
+        , Dropdown.view dropdownConfig model.dropdownState options
+        ]
         |> layout []
 
 
@@ -91,7 +93,7 @@ dropdownConfig =
             [ Border.width 1, Border.rounded 5, paddingXY 16 8, width fill, spacing 10 ]
 
         searchAttrs =
-            [ paddingXY 0 3 ]
+            [ paddingXY 0 3, Border.width 0 ]
 
         textAttrs =
             [ paddingXY 8 0, width fill ]
@@ -103,13 +105,20 @@ dropdownConfig =
             , spacing 5
             ]
 
-        itemToElement hightlighted i =
-            row
-                [ if hightlighted then
-                    mouseOver [ Background.color (rgb255 128 128 128) ]
+        itemToElement selected highlighted i =
+            let
+                bgColor =
+                    if highlighted then
+                        rgb255 128 128 128
 
-                  else
-                    mouseOver []
+                    else if selected then
+                        rgb255 100 100 100
+
+                    else
+                        rgb255 255 255 255
+            in
+            row
+                [ Background.color bgColor
                 , padding 8
                 , spacing 10
                 , width fill
