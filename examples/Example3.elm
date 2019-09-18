@@ -36,8 +36,8 @@ type OpenDropDown
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { countryDropdownState = Dropdown.init
-      , cityDropdownState = Dropdown.init
+    ( { countryDropdownState = Dropdown.init "country-dropdown"
+      , cityDropdownState = Dropdown.init "city-dropdown"
       , country = Nothing
       , city = Nothing
       , openDropDown = AllClosed
@@ -135,14 +135,19 @@ update msg model =
         CountryDropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update countryConfig subMsg model.countryDropdownState
+                    Dropdown.update countryConfig subMsg model.countryDropdownState countries
             in
             ( { model | countryDropdownState = state }, cmd )
 
         CityDropdownMsg subMsg ->
             let
+                cities =
+                    model.country
+                        |> Maybe.andThen (\c -> Dict.get c allCities)
+                        |> Maybe.withDefault []
+
                 ( state, cmd ) =
-                    Dropdown.update cityConfig subMsg model.cityDropdownState
+                    Dropdown.update cityConfig subMsg model.cityDropdownState cities
             in
             ( { model | cityDropdownState = state }, cmd )
 
@@ -190,10 +195,10 @@ dropdownConfig : (Dropdown.Msg String -> Msg) -> (Maybe String -> Msg) -> Dropdo
 dropdownConfig dropdownMsg itemPickedMsg =
     let
         containerAttrs =
-            [ width (px 300), centerX, centerY ]
+            [ width (px 300) ]
 
         inputAttrs =
-            [ Border.width 1, Border.rounded 5, paddingXY 16 8, width fill, spacing 10 ]
+            [ Border.width 1, Border.rounded 5, paddingXY 16 8, spacing 10, width fill ]
 
         searchAttrs =
             [ paddingXY 0 3 ]
@@ -208,9 +213,20 @@ dropdownConfig dropdownMsg itemPickedMsg =
             , spacing 5
             ]
 
-        itemToElement i =
+        itemToElement selected highlighted i =
+            let
+                bgColor =
+                    if highlighted then
+                        rgb255 128 128 128
+
+                    else if selected then
+                        rgb255 100 100 100
+
+                    else
+                        rgb255 255 255 255
+            in
             el
-                [ mouseOver [ Background.color (rgb255 128 128 128) ]
+                [ Background.color bgColor
                 , Font.size 16
                 , Font.center
                 , padding 8
@@ -218,9 +234,7 @@ dropdownConfig dropdownMsg itemPickedMsg =
                 ]
                 (text i)
     in
-    Dropdown.filterable dropdownMsg itemPickedMsg
-        |> Dropdown.withItemToText identity
-        |> Dropdown.withItemToElement itemToElement
+    Dropdown.filterable dropdownMsg itemPickedMsg itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withHeadAttributes inputAttrs
         |> Dropdown.withSearchAttributes searchAttrs

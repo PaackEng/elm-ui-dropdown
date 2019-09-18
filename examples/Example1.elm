@@ -80,4 +80,4 @@ view model =
 
 dropdownConfig : Dropdown.Config String Msg
 dropdownConfig =
-    Dropdown.basic DropdownMsg OptionPicked (\_ item -> Element.text item)
+    Dropdown.basic DropdownMsg OptionPicked (\_ _ item -> Element.text item)

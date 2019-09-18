@@ -28,7 +28,7 @@ type alias Model =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { dropdownState = Dropdown.init
+    ( { dropdownState = Dropdown.init "dropdown"
       , selectedOption = Nothing
       , options =
             [ "Option 1", "Option 2", "Option 3" ]
@@ -56,7 +56,7 @@ update msg model =
         DropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update dropdownConfig subMsg model.dropdownState
+                    Dropdown.update dropdownConfig subMsg model.dropdownState model.options
             in
             ( { model | dropdownState = state }, cmd )
 
@@ -107,8 +107,6 @@ dropdownConfig =
         inputAttrs =
             [ Border.color black, Border.width 2, Font.color black, padding 12 ]
     in
-    Dropdown.basic DropdownMsg OptionPicked
-        |> Dropdown.withItemToText identity
-        |> Dropdown.withItemToElement Element.text
+    Dropdown.basic DropdownMsg OptionPicked (\_ _ item -> Element.text item)
         |> Dropdown.withHeadAttributes inputAttrs
         |> Dropdown.withDisabledAttributes disabledAttrs
