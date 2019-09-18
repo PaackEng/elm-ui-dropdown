@@ -203,9 +203,6 @@ dropdownConfig dropdownMsg itemPickedMsg =
         searchAttrs =
             [ paddingXY 0 3 ]
 
-        textAttrs =
-            [ paddingXY 8 0, width fill ]
-
         listAttrs =
             [ Border.width 1
             , Border.roundEach { topLeft = 0, topRight = 0, bottomLeft = 5, bottomRight = 5 }
@@ -238,5 +235,4 @@ dropdownConfig dropdownMsg itemPickedMsg =
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withHeadAttributes inputAttrs
         |> Dropdown.withSearchAttributes searchAttrs
-        |> Dropdown.withTextAttributes textAttrs
         |> Dropdown.withListAttributes listAttrs

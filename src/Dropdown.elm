@@ -1,4 +1,4 @@
-module Dropdown exposing (Config, Msg, State, basic, filterable, init, update, view, withContainerAttributes, withDisabledAttributes, withHeadAttributes, withItemToText, withListAttributes, withOpenCloseButtons, withPromptElement, withSearchAttributes, withTextAttributes)
+module Dropdown exposing (Config, Msg, State, basic, filterable, init, update, view, withContainerAttributes, withDisabledAttributes, withHeadAttributes, withItemToText, withListAttributes, withOpenCloseButtons, withPromptElement, withSearchAttributes)
 
 import Browser.Dom as Dom
 import Element exposing (..)
@@ -36,7 +36,6 @@ type Config item msg
         , disabledAttributes : List (Attribute msg)
         , headAttributes : List (Attribute msg)
         , searchAttributes : List (Attribute msg)
-        , textAttributes : List (Attribute msg)
         , listAttributes : List (Attribute msg)
         , itemToElement : Bool -> Bool -> item -> Element msg
         , openButton : Element msg
@@ -47,7 +46,6 @@ type Config item msg
 
 type Msg item
     = NoOp
-    | OnBlur
     | OnClear
     | OnClickPrompt
     | OnEsc
@@ -88,7 +86,6 @@ basic dropdownMsg onSelectMsg itemToElement =
         , disabledAttributes = []
         , headAttributes = []
         , searchAttributes = []
-        , textAttributes = []
         , listAttributes = []
         , itemToElement = itemToElement
         , openButton = text "▼"
@@ -109,7 +106,6 @@ filterable dropdownMsg onSelectMsg itemToElement itemToText =
         , disabledAttributes = []
         , headAttributes = []
         , searchAttributes = []
-        , textAttributes = []
         , listAttributes = []
         , itemToElement = itemToElement
         , openButton = text "▼"
@@ -143,11 +139,6 @@ withSearchAttributes attrs (Config config) =
     Config { config | searchAttributes = attrs }
 
 
-withTextAttributes : List (Attribute msg) -> Config item msg -> Config item msg
-withTextAttributes attrs (Config config) =
-    Config { config | textAttributes = attrs }
-
-
 withListAttributes : List (Attribute msg) -> Config item msg -> Config item msg
 withListAttributes attrs (Config config) =
     Config { config | listAttributes = attrs }
@@ -174,9 +165,6 @@ update (Config config) msg (State state) data =
             case msg of
                 NoOp ->
                     ( state, Cmd.none )
-
-                OnBlur ->
-                    ( { state | isOpen = False }, Cmd.none )
 
                 OnClear ->
                     let
@@ -285,7 +273,7 @@ view (Config config) (State state) data =
                 |> Maybe.withDefault config.promptElement
 
         prompt =
-            el (onClickMsg :: config.textAttributes) promptElement
+            el [] promptElement
 
         filteredData =
             data
@@ -305,7 +293,13 @@ view (Config config) (State state) data =
                     prompt
 
                 Filterable ->
-                    Input.search (idAttr state.id :: config.searchAttributes)
+                    Input.search
+                        ([ idAttr state.id
+                         , focused []
+                         , onClickNoPropagation (config.dropdownMsg NoOp)
+                         ]
+                            ++ config.searchAttributes
+                        )
                         { onChange = config.dropdownMsg << OnFilterTyped
                         , text = state.filterText
                         , placeholder = Just <| Input.placeholder [] (text config.filterPlaceholder)
@@ -318,7 +312,7 @@ view (Config config) (State state) data =
                     el [] b
 
                 _ ->
-                    el [ onClickMsg ] b
+                    el [] b
 
         ( head, button, body ) =
             if state.isOpen then
@@ -347,7 +341,7 @@ view (Config config) (State state) data =
     in
     column
         (onKeyDown (config.dropdownMsg << OnKeyDown) :: config.containerAttributes)
-        [ row headAttrs [ head, button ]
+        [ row (onClickMsg :: headAttrs) [ head, button ]
         , body
         ]
 
@@ -364,6 +358,18 @@ idAttr val =
 onClick : msg -> Attribute msg
 onClick message =
     Events.onClick message
+
+
+onClickNoPropagation : msg -> Attribute msg
+onClickNoPropagation msg =
+    htmlAttribute <|
+        Html.Events.custom "click"
+            (Decode.succeed
+                { message = msg
+                , stopPropagation = True
+                , preventDefault = True
+                }
+            )
 
 
 onKeyDown : (Key -> msg) -> Attribute msg

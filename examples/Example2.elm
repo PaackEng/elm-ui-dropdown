@@ -76,7 +76,7 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    column [ width fill, height fill, padding 20 ]
+    column [ padding 20, spacing 20 ]
         [ el [] <| text <| "Selected Option: " ++ (model.selectedOption |> Maybe.withDefault "Nothing")
         , Dropdown.view dropdownConfig model.dropdownState options
         ]
@@ -87,16 +87,13 @@ dropdownConfig : Dropdown.Config String Msg
 dropdownConfig =
     let
         containerAttrs =
-            [ width (px 300), centerX, centerY ]
+            [ width (px 300) ]
 
-        inputAttrs =
-            [ Border.width 1, Border.rounded 5, paddingXY 16 8, width fill, spacing 10 ]
+        headAttrs =
+            [ Border.width 1, Border.rounded 5, paddingXY 16 8, spacing 10, width fill ]
 
         searchAttrs =
-            [ paddingXY 0 3, Border.width 0 ]
-
-        textAttrs =
-            [ paddingXY 8 0, width fill ]
+            [ Border.width 0, padding 0 ]
 
         listAttrs =
             [ Border.width 1
@@ -129,7 +126,6 @@ dropdownConfig =
     in
     Dropdown.filterable DropdownMsg OptionPicked itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
-        |> Dropdown.withHeadAttributes inputAttrs
+        |> Dropdown.withHeadAttributes headAttrs
         |> Dropdown.withSearchAttributes searchAttrs
-        |> Dropdown.withTextAttributes textAttrs
         |> Dropdown.withListAttributes listAttrs
