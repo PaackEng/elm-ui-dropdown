@@ -56,7 +56,7 @@ update msg model =
         DropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update dropdownConfig subMsg model.dropdownState
+                    Dropdown.update dropdownConfig subMsg model.dropdownState options
             in
             ( { model | dropdownState = state }, cmd )
 
@@ -103,9 +103,13 @@ dropdownConfig =
             , spacing 5
             ]
 
-        itemToElement i =
+        itemToElement hightlighted i =
             row
-                [ mouseOver [ Background.color (rgb255 128 128 128) ]
+                [ if hightlighted then
+                    mouseOver [ Background.color (rgb255 128 128 128) ]
+
+                  else
+                    mouseOver []
                 , padding 8
                 , spacing 10
                 , width fill
@@ -114,9 +118,7 @@ dropdownConfig =
                 , el [ Font.size 16 ] (text i)
                 ]
     in
-    Dropdown.filterable DropdownMsg OptionPicked
-        |> Dropdown.withItemToPrompt identity
-        |> Dropdown.withItemToElement itemToElement
+    Dropdown.filterable DropdownMsg OptionPicked itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withHeadAttributes inputAttrs
         |> Dropdown.withSearchAttributes searchAttrs

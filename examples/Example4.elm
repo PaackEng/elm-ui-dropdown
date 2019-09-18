@@ -108,7 +108,7 @@ dropdownConfig =
             [ Border.color black, Border.width 2, Font.color black, padding 12 ]
     in
     Dropdown.basic DropdownMsg OptionPicked
-        |> Dropdown.withItemToPrompt identity
+        |> Dropdown.withItemToText identity
         |> Dropdown.withItemToElement Element.text
         |> Dropdown.withHeadAttributes inputAttrs
         |> Dropdown.withDisabledAttributes disabledAttrs

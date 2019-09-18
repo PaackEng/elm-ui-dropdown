@@ -1,8 +1,10 @@
-module Dropdown exposing (Config, Msg, State, basic, filterable, init, update, view, withContainerAttributes, withDisabledAttributes, withHeadAttributes, withItemToElement, withItemToPrompt, withListAttributes, withOpenCloseButtons, withPromptText, withSearchAttributes, withTextAttributes)
+module Dropdown exposing (Config, Msg, State, basic, filterable, init, update, view, withContainerAttributes, withDisabledAttributes, withHeadAttributes, withItemToText, withListAttributes, withOpenCloseButtons, withPromptElement, withSearchAttributes, withTextAttributes)
 
 import Element exposing (..)
 import Element.Events as Events
 import Element.Input as Input
+import Html.Events
+import Json.Decode as Decode
 import Task
 
 
@@ -16,26 +18,27 @@ type State item
         { selectedItem : Maybe item
         , isOpen : Bool
         , filterText : String
+        , focusedIndex : Int
         }
 
 
 type Config item msg
     = Config
         { dropdownType : DropdownType
-        , promptText : String
+        , promptElement : Element msg
         , filterPlaceholder : String
         , dropdownMsg : Msg item -> msg
-        , itemPickedMsg : Maybe item -> msg
+        , onSelectMsg : Maybe item -> msg
         , containerAttributes : List (Attribute msg)
         , disabledAttributes : List (Attribute msg)
         , headAttributes : List (Attribute msg)
         , searchAttributes : List (Attribute msg)
         , textAttributes : List (Attribute msg)
         , listAttributes : List (Attribute msg)
-        , itemToElement : item -> Element msg
+        , itemToElement : Bool -> item -> Element msg
         , openButton : Element msg
         , closeButton : Element msg
-        , itemToPrompt : item -> String
+        , itemToText : item -> String
         }
 
 
@@ -47,15 +50,16 @@ type Msg item
     | OnEsc
     | OnSelect item
     | OnFilterTyped String
+    | OnKeyDown Key
 
 
 type Key
-    = KeyOther
-    | KeyArrowDown
-    | KeyArrowUp
-    | KeyEnter
-    | KeyEsc
-    | KeySpace
+    = Other
+    | ArrowDown
+    | ArrowUp
+    | Enter
+    | Esc
+    | Space
 
 
 init : State item
@@ -64,54 +68,55 @@ init =
         { selectedItem = Nothing
         , isOpen = False
         , filterText = ""
+        , focusedIndex = 0
         }
 
 
-basic : (Msg item -> msg) -> (Maybe item -> msg) -> Config item msg
-basic dropdownMsg itemPickedMsg =
+basic : (Msg item -> msg) -> (Maybe item -> msg) -> (Bool -> item -> Element msg) -> Config item msg
+basic dropdownMsg onSelectMsg itemToElement =
     Config
         { dropdownType = Basic
-        , promptText = "-- Select --"
+        , promptElement = text "-- Select --"
         , filterPlaceholder = "Filter values"
         , dropdownMsg = dropdownMsg
-        , itemPickedMsg = itemPickedMsg
+        , onSelectMsg = onSelectMsg
         , containerAttributes = []
         , disabledAttributes = []
         , headAttributes = []
         , searchAttributes = []
         , textAttributes = []
         , listAttributes = []
-        , itemToElement = \_ -> none
+        , itemToElement = itemToElement
         , openButton = text "▼"
         , closeButton = text "▲"
-        , itemToPrompt = \_ -> ""
+        , itemToText = \_ -> ""
         }
 
 
-filterable : (Msg item -> msg) -> (Maybe item -> msg) -> Config item msg
-filterable dropdownMsg itemPickedMsg =
+filterable : (Msg item -> msg) -> (Maybe item -> msg) -> (Bool -> item -> Element msg) -> (item -> String) -> Config item msg
+filterable dropdownMsg onSelectMsg itemToElement itemToText =
     Config
         { dropdownType = Filterable
-        , promptText = "-- Select --"
+        , promptElement = text "-- Select --"
         , filterPlaceholder = "Filter values"
         , dropdownMsg = dropdownMsg
-        , itemPickedMsg = itemPickedMsg
+        , onSelectMsg = onSelectMsg
         , containerAttributes = []
         , disabledAttributes = []
         , headAttributes = []
         , searchAttributes = []
         , textAttributes = []
         , listAttributes = []
-        , itemToElement = \_ -> none
+        , itemToElement = itemToElement
         , openButton = text "▼"
         , closeButton = text "▲"
-        , itemToPrompt = \_ -> ""
+        , itemToText = itemToText
         }
 
 
-withPromptText : String -> Config item msg -> Config item msg
-withPromptText promptText (Config config) =
-    Config { config | promptText = promptText }
+withPromptElement : Element msg -> Config item msg -> Config item msg
+withPromptElement promptElement (Config config) =
+    Config { config | promptElement = promptElement }
 
 
 withContainerAttributes : List (Attribute msg) -> Config item msg -> Config item msg
@@ -144,14 +149,9 @@ withListAttributes attrs (Config config) =
     Config { config | listAttributes = attrs }
 
 
-withItemToElement : (item -> Element msg) -> Config item msg -> Config item msg
-withItemToElement itemToElement (Config config) =
-    Config { config | itemToElement = itemToElement }
-
-
-withItemToPrompt : (item -> String) -> Config item msg -> Config item msg
-withItemToPrompt itemToPrompt (Config config) =
-    Config { config | itemToPrompt = itemToPrompt }
+withItemToText : (item -> String) -> Config item msg -> Config item msg
+withItemToText itemToText (Config config) =
+    Config { config | itemToText = itemToText }
 
 
 withOpenCloseButtons : { openButton : Element msg, closeButton : Element msg } -> Config item msg -> Config item msg
@@ -163,9 +163,12 @@ withOpenCloseButtons { openButton, closeButton } (Config config) =
 -- Update
 
 
-update : Config item msg -> Msg item -> State item -> ( State item, Cmd msg )
-update (Config config) msg (State state) =
+update : Config item msg -> Msg item -> State item -> List item -> ( State item, Cmd msg )
+update (Config config) msg (State state) data =
     let
+        _ =
+            Debug.log "msg" msg
+
         ( newState, newCommand ) =
             case msg of
                 NoOp ->
@@ -178,7 +181,7 @@ update (Config config) msg (State state) =
                     let
                         cmd =
                             Task.succeed Nothing
-                                |> Task.perform config.itemPickedMsg
+                                |> Task.perform config.onSelectMsg
                     in
                     ( { state | isOpen = False, selectedItem = Nothing }, cmd )
 
@@ -192,12 +195,62 @@ update (Config config) msg (State state) =
                     let
                         cmd =
                             Task.succeed (Just item)
-                                |> Task.perform config.itemPickedMsg
+                                |> Task.perform config.onSelectMsg
                     in
                     ( { state | isOpen = False, selectedItem = Just item }, cmd )
 
                 OnFilterTyped val ->
                     ( { state | filterText = val }, Cmd.none )
+
+                OnKeyDown key ->
+                    let
+                        newIndex =
+                            case key of
+                                ArrowUp ->
+                                    if state.focusedIndex == 0 then
+                                        List.length data - 1
+
+                                    else
+                                        state.focusedIndex - 1
+
+                                ArrowDown ->
+                                    if state.focusedIndex >= List.length data - 1 then
+                                        0
+
+                                    else
+                                        state.focusedIndex + 1
+
+                                _ ->
+                                    state.focusedIndex
+
+                        isOpen =
+                            case key of
+                                Esc ->
+                                    False
+
+                                Enter ->
+                                    False
+
+                                _ ->
+                                    True
+
+                        focusedItem =
+                            data
+                                |> List.indexedMap (\i item -> ( i, item ))
+                                |> List.filter (\( i, _ ) -> i == state.focusedIndex)
+                                |> List.head
+                                |> Maybe.map Tuple.second
+
+                        cmd =
+                            case key of
+                                Enter ->
+                                    Task.succeed focusedItem
+                                        |> Task.perform config.onSelectMsg
+
+                                _ ->
+                                    Cmd.none
+                    in
+                    ( { state | focusedIndex = newIndex, isOpen = isOpen }, cmd )
     in
     ( State newState, newCommand )
 
@@ -212,14 +265,17 @@ view (Config config) (State state) data =
         onClickMsg =
             onClick (config.dropdownMsg OnClickPrompt)
 
-        mainText =
+        promptElement =
             state.selectedItem
-                |> Maybe.map config.itemToPrompt
-                |> Maybe.withDefault config.promptText
+                |> Maybe.map (config.itemToElement False)
+                |> Maybe.withDefault config.promptElement
+
+        prompt =
+            el (onClickMsg :: config.textAttributes) promptElement
 
         filteredData =
             data
-                |> List.filter (\i -> String.contains state.filterText (config.itemToPrompt i))
+                |> List.filter (\i -> String.contains state.filterText (config.itemToText i))
 
         headAttrs =
             case filteredData of
@@ -228,9 +284,6 @@ view (Config config) (State state) data =
 
                 _ ->
                     config.headAttributes
-
-        prompt =
-            el (onClickMsg :: config.textAttributes) (text mainText)
 
         search =
             case config.dropdownType of
@@ -256,15 +309,19 @@ view (Config config) (State state) data =
         ( head, button, body ) =
             if state.isOpen then
                 let
-                    itemView item =
+                    itemView i item =
+                        let
+                            highlighed =
+                                i == state.focusedIndex
+                        in
                         el
                             [ onClick <| config.dropdownMsg (OnSelect item)
                             , width fill
                             ]
-                            (config.itemToElement item)
+                            (config.itemToElement highlighed item)
 
                     items =
-                        column config.listAttributes (List.map itemView filteredData)
+                        column config.listAttributes (List.indexedMap itemView filteredData)
                 in
                 ( search, openCloseButton config.closeButton, el [ width fill, inFront items ] none )
 
@@ -272,7 +329,7 @@ view (Config config) (State state) data =
                 ( prompt, openCloseButton config.openButton, none )
     in
     column
-        config.containerAttributes
+        (onKeyDown (config.dropdownMsg << OnKeyDown) :: config.containerAttributes)
         [ row headAttrs [ head, button ]
         , body
         ]
@@ -285,3 +342,30 @@ view (Config config) (State state) data =
 onClick : msg -> Attribute msg
 onClick message =
     Events.onClick message
+
+
+onKeyDown : (Key -> msg) -> Attribute msg
+onKeyDown msg =
+    let
+        stringToKey str =
+            case str of
+                "ArrowDown" ->
+                    Decode.succeed ArrowDown
+
+                "ArrowUp" ->
+                    Decode.succeed ArrowUp
+
+                "Enter" ->
+                    Decode.succeed Enter
+
+                "Escape" ->
+                    Decode.succeed Esc
+
+                _ ->
+                    Decode.fail "not used key"
+
+        keyDecoder =
+            Decode.field "key" Decode.string
+                |> Decode.andThen stringToKey
+    in
+    htmlAttribute (Html.Events.on "keydown" (Decode.map msg keyDecoder))

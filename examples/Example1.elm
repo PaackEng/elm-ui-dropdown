@@ -53,7 +53,7 @@ update msg model =
         DropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update dropdownConfig subMsg model.dropdownState
+                    Dropdown.update dropdownConfig subMsg model.dropdownState options
             in
             ( { model | dropdownState = state }, cmd )
 
@@ -80,6 +80,4 @@ view model =
 
 dropdownConfig : Dropdown.Config String Msg
 dropdownConfig =
-    Dropdown.basic DropdownMsg OptionPicked
-        |> Dropdown.withItemToPrompt identity
-        |> Dropdown.withItemToElement Element.text
+    Dropdown.basic DropdownMsg OptionPicked Element.text

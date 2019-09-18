@@ -219,7 +219,7 @@ dropdownConfig dropdownMsg itemPickedMsg =
                 (text i)
     in
     Dropdown.filterable dropdownMsg itemPickedMsg
-        |> Dropdown.withItemToPrompt identity
+        |> Dropdown.withItemToText identity
         |> Dropdown.withItemToElement itemToElement
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withHeadAttributes inputAttrs
