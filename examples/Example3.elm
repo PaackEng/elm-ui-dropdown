@@ -197,13 +197,13 @@ dropdownConfig dropdownMsg itemPickedMsg =
         containerAttrs =
             [ width (px 300) ]
 
-        inputAttrs =
+        triggerAttrs =
             [ Border.width 1, Border.rounded 5, paddingXY 16 8, spacing 10, width fill ]
 
         searchAttrs =
-            [ paddingXY 0 3 ]
+            [ Border.width 0, padding 0 ]
 
-        listAttrs =
+        bodyAttrs =
             [ Border.width 1
             , Border.roundEach { topLeft = 0, topRight = 0, bottomLeft = 5, bottomRight = 5 }
             , width fill
@@ -224,15 +224,14 @@ dropdownConfig dropdownMsg itemPickedMsg =
             in
             el
                 [ Background.color bgColor
-                , Font.size 16
-                , Font.center
                 , padding 8
+                , spacing 10
                 , width fill
                 ]
                 (text i)
     in
     Dropdown.filterable dropdownMsg itemPickedMsg itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
-        |> Dropdown.withHeadAttributes inputAttrs
+        |> Dropdown.withTriggerAttributes triggerAttrs
+        |> Dropdown.withBodyAttributes bodyAttrs
         |> Dropdown.withSearchAttributes searchAttrs
-        |> Dropdown.withListAttributes listAttrs

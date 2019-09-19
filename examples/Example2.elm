@@ -127,5 +127,5 @@ dropdownConfig =
     Dropdown.filterable DropdownMsg OptionPicked itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withTriggerAttributes triggerAttrs
-        |> Dropdown.withSearchAttributes searchAttrs
         |> Dropdown.withBodyAttributes bodyAttrs
+        |> Dropdown.withSearchAttributes searchAttrs

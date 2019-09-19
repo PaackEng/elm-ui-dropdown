@@ -198,12 +198,13 @@ update (Config config) msg (State state) data =
                             not state.isOpen
 
                         cmd =
-                            -- if isOpen then
-                            --     Task.attempt (\_ -> NoOp) (Dom.focus state.id)
-                            -- else
-                            Cmd.none
+                            if isOpen then
+                                Task.attempt (\_ -> NoOp) (Dom.focus (state.id ++ "input-search"))
+
+                            else
+                                Cmd.none
                     in
-                    ( { state | isOpen = isOpen, focusedIndex = 0 }, Cmd.map config.dropdownMsg cmd )
+                    ( { state | isOpen = isOpen, focusedIndex = 0, filterText = "" }, Cmd.map config.dropdownMsg cmd )
 
                 OnEsc ->
                     ( { state | isOpen = False }, Cmd.none )
@@ -286,9 +287,13 @@ view (Config config) (State state) data =
             ]
                 ++ config.containerAttributes
 
+        filter item =
+            String.contains (state.filterText |> String.toLower)
+                (item |> config.itemToText |> String.toLower)
+
         filteredData =
             data
-                |> List.filter (\i -> String.contains state.filterText (config.itemToText i))
+                |> List.filter filter
     in
     column
         containerAttrs
@@ -302,12 +307,16 @@ triggerView config state data =
     let
         triggerAttrs =
             [ onClick (config.dropdownMsg OnClickPrompt)
-
-            -- , onKeyDown (config.dropdownMsg << OnKeyDown)
-            , onBlurAttribute config state
+            , onKeyDown (config.dropdownMsg << OnKeyDown)
             , tabIndexAttr 0
             , referenceAttr config state
             ]
+                ++ (if config.dropdownType == Basic then
+                        [ onBlurAttribute config state ]
+
+                    else
+                        []
+                   )
                 ++ config.triggerAttributes
 
         prompt =
@@ -326,9 +335,10 @@ triggerView config state data =
 
                 Filterable ->
                     Input.search
-                        ([ idAttr state.id
+                        ([ idAttr (state.id ++ "input-search")
                          , focused []
                          , onClickNoPropagation (config.dropdownMsg NoOp)
+                         , onBlurAttribute config state
                          ]
                             ++ config.searchAttributes
                         )
@@ -368,8 +378,6 @@ itemView config state i item =
     let
         itemAttrs =
             [ onClick <| config.dropdownMsg (OnSelect item)
-            , onKeyDown (config.dropdownMsg << OnKeyDown)
-            , onBlurAttribute config state
             , referenceAttr config state
             , tabIndexAttr -1
             , width fill
@@ -430,31 +438,6 @@ onClickNoPropagation msg =
         |> htmlAttribute
 
 
-onTriggerKeyDown : (Key -> msg) -> Attribute msg
-onTriggerKeyDown msg =
-    let
-        stringToKey str =
-            case str of
-                "ArrowDown" ->
-                    Decode.succeed ArrowDown
-
-                "Space" ->
-                    Decode.succeed ArrowUp
-
-                "Enter" ->
-                    Decode.succeed Enter
-
-                _ ->
-                    Decode.fail "not used key"
-
-        keyDecoder =
-            Decode.field "key" Decode.string
-                |> Decode.andThen stringToKey
-    in
-    Html.Events.on "keydown" (Decode.map msg keyDecoder)
-        |> htmlAttribute
-
-
 onKeyDown : (Key -> msg) -> Attribute msg
 onKeyDown msg =
     let
@@ -483,10 +466,7 @@ onKeyDown msg =
         |> htmlAttribute
 
 
-
--- onBlurAttribute : Config msg item -> State item -> Attribute msg
-
-
+onBlurAttribute : InternalConfig item msg -> InternalState item -> Attribute msg
 onBlurAttribute config state =
     let
         -- relatedTarget only works if element has tabindex
