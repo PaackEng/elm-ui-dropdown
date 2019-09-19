@@ -89,13 +89,13 @@ dropdownConfig =
         containerAttrs =
             [ width (px 300) ]
 
-        headAttrs =
+        triggerAttrs =
             [ Border.width 1, Border.rounded 5, paddingXY 16 8, spacing 10, width fill ]
 
         searchAttrs =
             [ Border.width 0, padding 0 ]
 
-        listAttrs =
+        bodyAttrs =
             [ Border.width 1
             , Border.roundEach { topLeft = 0, topRight = 0, bottomLeft = 5, bottomRight = 5 }
             , width fill
@@ -126,6 +126,6 @@ dropdownConfig =
     in
     Dropdown.filterable DropdownMsg OptionPicked itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
-        |> Dropdown.withHeadAttributes headAttrs
+        |> Dropdown.withTriggerAttributes triggerAttrs
         |> Dropdown.withSearchAttributes searchAttrs
-        |> Dropdown.withListAttributes listAttrs
+        |> Dropdown.withBodyAttributes bodyAttrs
