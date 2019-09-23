@@ -210,6 +210,9 @@ dropdownConfig dropdownMsg itemPickedMsg =
             , spacing 5
             ]
 
+        itemToPrompt item =
+            text item
+
         itemToElement selected highlighted i =
             let
                 bgColor =
@@ -230,7 +233,7 @@ dropdownConfig dropdownMsg itemPickedMsg =
                 ]
                 (text i)
     in
-    Dropdown.filterable dropdownMsg itemPickedMsg itemToElement identity
+    Dropdown.filterable dropdownMsg itemPickedMsg itemToPrompt itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withTriggerAttributes triggerAttrs
         |> Dropdown.withBodyAttributes bodyAttrs

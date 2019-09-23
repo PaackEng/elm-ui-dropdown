@@ -1,4 +1,4 @@
-module Example2 exposing (..)
+module Example4 exposing (..)
 
 import Browser
 import Dropdown
@@ -35,7 +35,9 @@ init _ =
 
 options : List String
 options =
-    [ "Option 1", "Option 2", "Option 3", "Option 4", "Option 5", "Option 6" ]
+    List.range 1 100
+        |> List.map String.fromInt
+        |> List.map ((++) "Option ")
 
 
 
@@ -79,6 +81,7 @@ view model =
     column [ padding 20, spacing 20 ]
         [ el [] <| text <| "Selected Option: " ++ (model.selectedOption |> Maybe.withDefault "Nothing")
         , Dropdown.view dropdownConfig model.dropdownState options
+        , el [] <| text "other content"
         ]
         |> layout []
 
@@ -87,19 +90,26 @@ dropdownConfig : Dropdown.Config String Msg
 dropdownConfig =
     let
         containerAttrs =
-            [ width (px 300) ]
+            [ width (px 200) ]
 
         triggerAttrs =
-            [ Border.width 1, Border.rounded 5, paddingXY 16 8, spacing 10, width fill ]
+            [ Border.width 1
+            , Border.rounded 5
+            , paddingXY 16 8
+            , spacing 10
+            , width fill
+            ]
 
         searchAttrs =
-            [ Border.width 0, padding 0 ]
+            [ Border.width 0, padding 0, width fill ]
 
         bodyAttrs =
             [ Border.width 1
             , Border.roundEach { topLeft = 0, topRight = 0, bottomLeft = 5, bottomRight = 5 }
             , width fill
-            , spacing 5
+            , clip
+            , scrollbarY
+            , height (fill |> maximum 200)
             ]
 
         itemToPrompt item =

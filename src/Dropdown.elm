@@ -10,7 +10,6 @@ module Dropdown exposing
     , withBodyAttributes
     , withContainerAttributes
     , withDisabledAttributes
-    , withItemToText
     , withOpenCloseButtons
     , withPromptElement
     , withSearchAttributes
@@ -56,6 +55,7 @@ type alias InternalConfig item msg =
     , triggerAttributes : List (Attribute msg)
     , bodyAttributes : List (Attribute msg)
     , searchAttributes : List (Attribute msg)
+    , itemToPrompt : item -> Element msg
     , itemToElement : Bool -> Bool -> item -> Element msg
     , openButton : Element msg
     , closeButton : Element msg
@@ -71,19 +71,16 @@ type Msg item
     = NoOp
     | OnBlur
     | OnClickPrompt
-    | OnEsc
     | OnSelect item
     | OnFilterTyped String
     | OnKeyDown Key
 
 
 type Key
-    = Other
-    | ArrowDown
+    = ArrowDown
     | ArrowUp
     | Enter
     | Esc
-    | Space
 
 
 init : String -> State item
@@ -97,11 +94,11 @@ init id =
         }
 
 
-basic : (Msg item -> msg) -> (Maybe item -> msg) -> (Bool -> Bool -> item -> Element msg) -> Config item msg
-basic dropdownMsg onSelectMsg itemToElement =
+basic : (Msg item -> msg) -> (Maybe item -> msg) -> (item -> Element msg) -> (Bool -> Bool -> item -> Element msg) -> Config item msg
+basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
     Config
         { dropdownType = Basic
-        , promptElement = text "-- Select --"
+        , promptElement = el [ width fill ] (text "-- Select --")
         , filterPlaceholder = "Filter values"
         , dropdownMsg = dropdownMsg
         , onSelectMsg = onSelectMsg
@@ -110,6 +107,7 @@ basic dropdownMsg onSelectMsg itemToElement =
         , triggerAttributes = []
         , bodyAttributes = []
         , searchAttributes = []
+        , itemToPrompt = itemToPrompt
         , itemToElement = itemToElement
         , openButton = text "▼"
         , closeButton = text "▲"
@@ -117,11 +115,11 @@ basic dropdownMsg onSelectMsg itemToElement =
         }
 
 
-filterable : (Msg item -> msg) -> (Maybe item -> msg) -> (Bool -> Bool -> item -> Element msg) -> (item -> String) -> Config item msg
-filterable dropdownMsg onSelectMsg itemToElement itemToText =
+filterable : (Msg item -> msg) -> (Maybe item -> msg) -> (item -> Element msg) -> (Bool -> Bool -> item -> Element msg) -> (item -> String) -> Config item msg
+filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
     Config
         { dropdownType = Filterable
-        , promptElement = text "-- Select --"
+        , promptElement = el [ width fill ] (text "-- Select --")
         , filterPlaceholder = "Filter values"
         , dropdownMsg = dropdownMsg
         , onSelectMsg = onSelectMsg
@@ -130,6 +128,7 @@ filterable dropdownMsg onSelectMsg itemToElement itemToText =
         , triggerAttributes = []
         , bodyAttributes = []
         , searchAttributes = []
+        , itemToPrompt = itemToPrompt
         , itemToElement = itemToElement
         , openButton = text "▼"
         , closeButton = text "▲"
@@ -167,11 +166,6 @@ withBodyAttributes attrs (Config config) =
     Config { config | bodyAttributes = attrs }
 
 
-withItemToText : (item -> String) -> Config item msg -> Config item msg
-withItemToText itemToText (Config config) =
-    Config { config | itemToText = itemToText }
-
-
 withOpenCloseButtons : { openButton : Element msg, closeButton : Element msg } -> Config item msg -> Config item msg
 withOpenCloseButtons { openButton, closeButton } (Config config) =
     Config { config | openButton = openButton, closeButton = closeButton }
@@ -190,7 +184,8 @@ update (Config config) msg (State state) data =
                     ( state, Cmd.none )
 
                 OnBlur ->
-                    ( { state | isOpen = False }, Cmd.none )
+                    -- ( { state | isOpen = False }, Cmd.none )
+                    ( state, Cmd.none )
 
                 OnClickPrompt ->
                     let
@@ -205,9 +200,6 @@ update (Config config) msg (State state) data =
                                 Cmd.none
                     in
                     ( { state | isOpen = isOpen, focusedIndex = 0, filterText = "" }, Cmd.map config.dropdownMsg cmd )
-
-                OnEsc ->
-                    ( { state | isOpen = False }, Cmd.none )
 
                 OnSelect item ->
                     let
@@ -284,6 +276,7 @@ view (Config config) (State state) data =
     let
         containerAttrs =
             [ idAttr state.id
+            , below body
             ]
                 ++ config.containerAttributes
 
@@ -294,22 +287,27 @@ view (Config config) (State state) data =
         filteredData =
             data
                 |> List.filter filter
+
+        trigger =
+            triggerView config state
+
+        body =
+            bodyView config state filteredData
     in
     column
         containerAttrs
-        [ triggerView config state filteredData
-        , bodyView config state filteredData
+        [ el [ width fill, below body ] trigger
         ]
 
 
-triggerView : InternalConfig item msg -> InternalState item -> List item -> Element msg
-triggerView config state data =
+triggerView : InternalConfig item msg -> InternalState item -> Element msg
+triggerView config state =
     let
         triggerAttrs =
             [ onClick (config.dropdownMsg OnClickPrompt)
             , onKeyDown (config.dropdownMsg << OnKeyDown)
             , tabIndexAttr 0
-            , referenceAttr config state
+            , referenceAttr state
             ]
                 ++ (if config.dropdownType == Basic then
                         [ onBlurAttribute config state ]
@@ -320,10 +318,10 @@ triggerView config state data =
                 ++ config.triggerAttributes
 
         prompt =
-            el [] <|
+            el [ width fill ] <|
                 case state.selectedItem of
                     Just selectedItem ->
-                        config.itemToElement False False selectedItem
+                        config.itemToPrompt selectedItem
 
                     Nothing ->
                         config.promptElement
@@ -366,8 +364,15 @@ bodyView config state data =
                 column
                     config.bodyAttributes
                     (List.indexedMap (itemView config state) data)
+
+            body =
+                el
+                    [ htmlAttribute <| Html.Attributes.style "flex-shrink" "1"
+                    , width fill
+                    ]
+                    items
         in
-        el [ width fill, inFront items ] none
+        body
 
     else
         none
@@ -378,7 +383,7 @@ itemView config state i item =
     let
         itemAttrs =
             [ onClick <| config.dropdownMsg (OnSelect item)
-            , referenceAttr config state
+            , referenceAttr state
             , tabIndexAttr -1
             , width fill
             ]
@@ -415,8 +420,8 @@ referenceDataName =
     "data-dropdown-id"
 
 
-referenceAttr : InternalConfig item msg -> InternalState item -> Attribute msg
-referenceAttr config model =
+referenceAttr : InternalState item -> Attribute msg
+referenceAttr model =
     Html.Attributes.attribute referenceDataName model.id
         |> htmlAttribute
 

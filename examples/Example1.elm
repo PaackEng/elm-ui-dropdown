@@ -80,4 +80,11 @@ view model =
 
 dropdownConfig : Dropdown.Config String Msg
 dropdownConfig =
-    Dropdown.basic DropdownMsg OptionPicked (\_ _ item -> Element.text item)
+    let
+        itemToPrompt item =
+            Element.text item
+
+        itemToElement selected_ highlighted_ item =
+            Element.text item
+    in
+    Dropdown.basic DropdownMsg OptionPicked itemToPrompt itemToElement
