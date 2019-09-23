@@ -9,6 +9,7 @@ import Element.Font as Font
 import Html exposing (Html)
 
 
+main : Program () Model Msg
 main =
     Browser.element
         { init = init

@@ -6,6 +6,7 @@ import Element exposing (..)
 import Html exposing (Html)
 
 
+main : Program () Model Msg
 main =
     Browser.element
         { init = init
@@ -84,7 +85,7 @@ dropdownConfig =
         itemToPrompt item =
             Element.text item
 
-        itemToElement selected_ highlighted_ item =
+        itemToElement selected highlighted item =
             Element.text item
     in
     Dropdown.basic DropdownMsg OptionPicked itemToPrompt itemToElement
