@@ -79,6 +79,8 @@ type Config item msg
     = Config (InternalConfig item msg)
 
 
+{-| Opaque type for the internal dropdown messages
+-}
 type Msg item
     = NoOp
     | OnBlur
