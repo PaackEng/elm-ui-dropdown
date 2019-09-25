@@ -7,13 +7,13 @@ module Dropdown exposing
     , init
     , update
     , view
-    , withBodyAttributes
     , withContainerAttributes
     , withDisabledAttributes
+    , withListElement
     , withOpenCloseButtons
     , withPromptElement
     , withSearchAttributes
-    , withTriggerAttributes
+    , withSelectElement
     )
 
 import Browser.Dom as Dom
@@ -52,8 +52,8 @@ type alias InternalConfig item msg =
     , onSelectMsg : Maybe item -> msg
     , containerAttributes : List (Attribute msg)
     , disabledAttributes : List (Attribute msg)
-    , triggerAttributes : List (Attribute msg)
-    , bodyAttributes : List (Attribute msg)
+    , selectAttributes : List (Attribute msg)
+    , listAttributes : List (Attribute msg)
     , searchAttributes : List (Attribute msg)
     , itemToPrompt : item -> Element msg
     , itemToElement : Bool -> Bool -> item -> Element msg
@@ -104,8 +104,8 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
         , onSelectMsg = onSelectMsg
         , containerAttributes = []
         , disabledAttributes = []
-        , triggerAttributes = []
-        , bodyAttributes = []
+        , selectAttributes = []
+        , listAttributes = []
         , searchAttributes = []
         , itemToPrompt = itemToPrompt
         , itemToElement = itemToElement
@@ -125,8 +125,8 @@ filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
         , onSelectMsg = onSelectMsg
         , containerAttributes = []
         , disabledAttributes = []
-        , triggerAttributes = []
-        , bodyAttributes = []
+        , selectAttributes = []
+        , listAttributes = []
         , searchAttributes = []
         , itemToPrompt = itemToPrompt
         , itemToElement = itemToElement
@@ -151,9 +151,9 @@ withDisabledAttributes attrs (Config config) =
     Config { config | disabledAttributes = attrs }
 
 
-withTriggerAttributes : List (Attribute msg) -> Config item msg -> Config item msg
-withTriggerAttributes attrs (Config config) =
-    Config { config | triggerAttributes = attrs }
+withSelectElement : List (Attribute msg) -> Config item msg -> Config item msg
+withSelectElement attrs (Config config) =
+    Config { config | selectAttributes = attrs }
 
 
 withSearchAttributes : List (Attribute msg) -> Config item msg -> Config item msg
@@ -161,9 +161,9 @@ withSearchAttributes attrs (Config config) =
     Config { config | searchAttributes = attrs }
 
 
-withBodyAttributes : List (Attribute msg) -> Config item msg -> Config item msg
-withBodyAttributes attrs (Config config) =
-    Config { config | bodyAttributes = attrs }
+withListElement : List (Attribute msg) -> Config item msg -> Config item msg
+withListElement attrs (Config config) =
+    Config { config | listAttributes = attrs }
 
 
 withOpenCloseButtons : { openButton : Element msg, closeButton : Element msg } -> Config item msg -> Config item msg
@@ -315,7 +315,7 @@ triggerView config state =
                     else
                         []
                    )
-                ++ config.triggerAttributes
+                ++ config.selectAttributes
 
         prompt =
             el [ width fill ] <|
@@ -362,7 +362,7 @@ bodyView config state data =
         let
             items =
                 column
-                    config.bodyAttributes
+                    config.listAttributes
                     (List.indexedMap (itemView config state) data)
 
             body =
