@@ -1,20 +1,20 @@
 module Dropdown exposing
-    ( Config
+    ( State, init
     , Msg
-    , State
-    , basic
-    , filterable
-    , init
-    , update
-    , view
-    , withContainerAttributes
-    , withDisabledAttributes
-    , withListElement
-    , withOpenCloseButtons
-    , withPromptElement
-    , withSearchAttributes
-    , withSelectElement
+    , Config, basic, filterable
+    , withContainerAttributes, withPromptElement, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
+    , update, view
     )
+
+{-| Elm UI Dropdown.
+
+@docs State, init
+@docs Msg
+@docs Config, basic, filterable
+@docs withContainerAttributes, withPromptElement, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
+@docs update, view
+
+-}
 
 import Browser.Dom as Dom
 import Element exposing (..)
@@ -40,6 +40,13 @@ type alias InternalState item =
     }
 
 
+{-| Opaque type that holds the current state
+
+    type alias Model =
+        { dropdownState : Dropdown.State String
+        }
+
+-}
 type State item
     = State (InternalState item)
 
@@ -51,7 +58,6 @@ type alias InternalConfig item msg =
     , dropdownMsg : Msg item -> msg
     , onSelectMsg : Maybe item -> msg
     , containerAttributes : List (Attribute msg)
-    , disabledAttributes : List (Attribute msg)
     , selectAttributes : List (Attribute msg)
     , listAttributes : List (Attribute msg)
     , searchAttributes : List (Attribute msg)
@@ -63,10 +69,18 @@ type alias InternalConfig item msg =
     }
 
 
+{-| Opaque type that holds the current config
+
+    dropdownConfig =
+        Dropdown.basic DropdownMsg OptionPicked Element.text Element.text
+
+-}
 type Config item msg
     = Config (InternalConfig item msg)
 
 
+{-| Opaque type for the internal dropdown messages
+-}
 type Msg item
     = NoOp
     | OnBlur
@@ -83,6 +97,14 @@ type Key
     | Esc
 
 
+{-| Create a new state. You must pass a unique identifier for each dropdown component.
+
+    {
+        ...
+        dropdownState = Dropdown.init "country-dropdown"
+    }
+
+-}
 init : String -> State item
 init id =
     State
@@ -94,6 +116,16 @@ init id =
         }
 
 
+{-| Create a basic configuration. This takes:
+
+    - The message to wrap all the internal messages of the dropdown
+    - A message to trigger when an item is selected
+    - A function to get the Element to display from an item, to be used in the select part of the dropdown
+    - A function to get the Element to display from an item, to be used in the item list of the dropdown
+
+    Dropdown.basic DropdownMsg OptionPicked Element.text Element.text
+
+-}
 basic : (Msg item -> msg) -> (Maybe item -> msg) -> (item -> Element msg) -> (Bool -> Bool -> item -> Element msg) -> Config item msg
 basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
     Config
@@ -103,7 +135,6 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
         , dropdownMsg = dropdownMsg
         , onSelectMsg = onSelectMsg
         , containerAttributes = []
-        , disabledAttributes = []
         , selectAttributes = []
         , listAttributes = []
         , searchAttributes = []
@@ -115,6 +146,17 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
         }
 
 
+{-| Create a filterable configuration. This takes:
+
+    - The message to wrap all the internal messages of the dropdown
+    - A message to trigger when an item is selected
+    - A function to get the Element to display from an item, to be used in the select part of the dropdown
+    - A function to get the Element to display from an item, to be used in the item list of the dropdown
+    - A function to get the text representation from an item, to be used when filtering elements in the list
+
+    Dropdown.basic DropdownMsg OptionPicked Element.text Element.text
+
+-}
 filterable : (Msg item -> msg) -> (Maybe item -> msg) -> (item -> Element msg) -> (Bool -> Bool -> item -> Element msg) -> (item -> String) -> Config item msg
 filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
     Config
@@ -124,7 +166,6 @@ filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
         , dropdownMsg = dropdownMsg
         , onSelectMsg = onSelectMsg
         , containerAttributes = []
-        , disabledAttributes = []
         , selectAttributes = []
         , listAttributes = []
         , searchAttributes = []
@@ -136,45 +177,76 @@ filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
         }
 
 
+{-| Sets the content of the Select, default is "-- Select --"
+
+    Dropdown.withPromptElement (el [ Font.color (rgb255 123 123 123) ] <| text "Pick one") config
+
+-}
 withPromptElement : Element msg -> Config item msg -> Config item msg
 withPromptElement promptElement (Config config) =
     Config { config | promptElement = promptElement }
 
 
+{-| Sets the container visual attributes, default is empty
+
+    Dropdown.withContainerAttributes [ width (px 300) ] config
+
+-}
 withContainerAttributes : List (Attribute msg) -> Config item msg -> Config item msg
 withContainerAttributes attrs (Config config) =
     Config { config | containerAttributes = attrs }
 
 
-withDisabledAttributes : List (Attribute msg) -> Config item msg -> Config item msg
-withDisabledAttributes attrs (Config config) =
-    Config { config | disabledAttributes = attrs }
+{-| Sets the select visual attributes, default is empty
 
+    Dropdown.withSelectAttributes [ Border.width 1, Border.rounded 5, paddingXY 16 8 ] config
 
-withSelectElement : List (Attribute msg) -> Config item msg -> Config item msg
-withSelectElement attrs (Config config) =
+-}
+withSelectAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withSelectAttributes attrs (Config config) =
     Config { config | selectAttributes = attrs }
 
 
+{-| Sets the search visual attributes, default is empty
+
+    Dropdown.withSearchAttributes [ Border.width 0, padding 0 ] config
+
+-}
 withSearchAttributes : List (Attribute msg) -> Config item msg -> Config item msg
 withSearchAttributes attrs (Config config) =
     Config { config | searchAttributes = attrs }
 
 
-withListElement : List (Attribute msg) -> Config item msg -> Config item msg
-withListElement attrs (Config config) =
-    Config { config | listAttributes = attrs }
+{-| Sets the open and close buttons' visual attributes, default is empty
 
+    Dropdown.withOpenCloseButtons { openButton = text "+", closeButton = "-" } config
 
+-}
 withOpenCloseButtons : { openButton : Element msg, closeButton : Element msg } -> Config item msg -> Config item msg
 withOpenCloseButtons { openButton, closeButton } (Config config) =
     Config { config | openButton = openButton, closeButton = closeButton }
 
 
+{-| Sets the item list visual attributes, default is empty
 
--- Update
+    Dropdown.withListAttributes [ Border.width 1, Border.rounded ] config
+
+-}
+withListAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withListAttributes attrs (Config config) =
+    Config { config | listAttributes = attrs }
 
 
+{-| Update the component state
+
+    DropdownMsg subMsg ->
+        let
+            ( updated, cmd ) =
+                Dropdown.update dropdownConfig subMsg model.dropdownState model.items
+        in
+            ( { model | dropdownState = updated }, cmd )
+
+-}
 update : Config item msg -> Msg item -> State item -> List item -> ( State item, Cmd msg )
 update (Config config) msg (State state) data =
     let
@@ -184,8 +256,7 @@ update (Config config) msg (State state) data =
                     ( state, Cmd.none )
 
                 OnBlur ->
-                    -- ( { state | isOpen = False }, Cmd.none )
-                    ( state, Cmd.none )
+                    ( { state | isOpen = False }, Cmd.none )
 
                 OnClickPrompt ->
                     let
@@ -267,10 +338,11 @@ update (Config config) msg (State state) data =
     ( State newState, newCommand )
 
 
+{-| Render the view
 
--- View
+    Dropdown.view dropdownConfig model.dropdownState model.items
 
-
+-}
 view : Config item msg -> State item -> List item -> Element msg
 view (Config config) (State state) data =
     let
@@ -303,7 +375,7 @@ view (Config config) (State state) data =
 triggerView : InternalConfig item msg -> InternalState item -> Element msg
 triggerView config state =
     let
-        triggerAttrs =
+        selectAttrs =
             [ onClick (config.dropdownMsg OnClickPrompt)
             , onKeyDown (config.dropdownMsg << OnKeyDown)
             , tabIndexAttr 0
@@ -353,7 +425,7 @@ triggerView config state =
             else
                 ( prompt, el [] config.openButton )
     in
-    row triggerAttrs [ promptOrSearch, button ]
+    row selectAttrs [ promptOrSearch, button ]
 
 
 bodyView : InternalConfig item msg -> InternalState item -> List item -> Element msg
