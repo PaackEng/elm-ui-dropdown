@@ -433,9 +433,8 @@ triggerView config state =
                         { onChange = config.dropdownMsg << OnFilterTyped
                         , text = state.filterText
                         , placeholder =
-                            Just <|
-                                Input.placeholder []
-                                    (config.filterPlaceholder |> Maybe.map text |> Maybe.withDefault none)
+                            config.filterPlaceholder
+                                |> Maybe.map (text >> Input.placeholder [])
                         , label = Input.labelHidden "Filter List"
                         }
 
