@@ -54,7 +54,7 @@ type State item
 type alias InternalConfig item msg =
     { dropdownType : DropdownType
     , promptElement : Element msg
-    , filterPlaceholder : String
+    , filterPlaceholder : Maybe String
     , dropdownMsg : Msg item -> msg
     , onSelectMsg : Maybe item -> msg
     , containerAttributes : List (Attribute msg)
@@ -131,7 +131,7 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
     Config
         { dropdownType = Basic
         , promptElement = el [ width fill ] (text "-- Select --")
-        , filterPlaceholder = "Filter values"
+        , filterPlaceholder = Just "Filter values"
         , dropdownMsg = dropdownMsg
         , onSelectMsg = onSelectMsg
         , containerAttributes = []
@@ -162,7 +162,7 @@ filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
     Config
         { dropdownType = Filterable
         , promptElement = el [ width fill ] (text "-- Select --")
-        , filterPlaceholder = "Filter values"
+        , filterPlaceholder = Just "Filter values"
         , dropdownMsg = dropdownMsg
         , onSelectMsg = onSelectMsg
         , containerAttributes = []
@@ -414,7 +414,10 @@ triggerView config state =
                         )
                         { onChange = config.dropdownMsg << OnFilterTyped
                         , text = state.filterText
-                        , placeholder = Just <| Input.placeholder [] (text config.filterPlaceholder)
+                        , placeholder =
+                            Just <|
+                                Input.placeholder []
+                                    (config.filterPlaceholder |> Maybe.map text |> Maybe.withDefault none)
                         , label = Input.labelHidden "Filter List"
                         }
 
