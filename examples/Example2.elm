@@ -130,6 +130,8 @@ dropdownConfig =
     in
     Dropdown.filterable DropdownMsg OptionPicked itemToPrompt itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
+        |> Dropdown.withPromptElement (el [] (text "Select option"))
+        |> Dropdown.withFilterPlaceholder "Type for option"
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs
         |> Dropdown.withSearchAttributes searchAttrs
