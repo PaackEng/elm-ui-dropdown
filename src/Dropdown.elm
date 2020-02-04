@@ -2,7 +2,7 @@ module Dropdown exposing
     ( State, init
     , Msg
     , Config, basic, filterable
-    , withContainerAttributes, withPromptElement, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
+    , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
     , update, view
     )
 
@@ -11,7 +11,7 @@ module Dropdown exposing
 @docs State, init
 @docs Msg
 @docs Config, basic, filterable
-@docs withContainerAttributes, withPromptElement, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
+@docs withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
 @docs update, view
 
 -}
@@ -54,7 +54,7 @@ type State item
 type alias InternalConfig item msg =
     { dropdownType : DropdownType
     , promptElement : Element msg
-    , filterPlaceholder : String
+    , filterPlaceholder : Maybe String
     , dropdownMsg : Msg item -> msg
     , onSelectMsg : Maybe item -> msg
     , containerAttributes : List (Attribute msg)
@@ -131,7 +131,7 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
     Config
         { dropdownType = Basic
         , promptElement = el [ width fill ] (text "-- Select --")
-        , filterPlaceholder = "Filter values"
+        , filterPlaceholder = Nothing
         , dropdownMsg = dropdownMsg
         , onSelectMsg = onSelectMsg
         , containerAttributes = []
@@ -162,7 +162,7 @@ filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
     Config
         { dropdownType = Filterable
         , promptElement = el [ width fill ] (text "-- Select --")
-        , filterPlaceholder = "Filter values"
+        , filterPlaceholder = Just "Filter values"
         , dropdownMsg = dropdownMsg
         , onSelectMsg = onSelectMsg
         , containerAttributes = []
@@ -185,6 +185,24 @@ filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
 withPromptElement : Element msg -> Config item msg -> Config item msg
 withPromptElement promptElement (Config config) =
     Config { config | promptElement = promptElement }
+
+
+{-| Sets the placeholder of the Filterable dropdown, default is "Filter values"
+
+    Dropdown.withFilterPlaceholder "Type here..." config
+
+-}
+withFilterPlaceholder : String -> Config item msg -> Config item msg
+withFilterPlaceholder placeholderString (Config config) =
+    let
+        placeholder =
+            if String.isEmpty placeholderString then
+                Nothing
+
+            else
+                Just placeholderString
+    in
+    Config { config | filterPlaceholder = placeholder }
 
 
 {-| Sets the container visual attributes, default is empty
@@ -414,7 +432,9 @@ triggerView config state =
                         )
                         { onChange = config.dropdownMsg << OnFilterTyped
                         , text = state.filterText
-                        , placeholder = Just <| Input.placeholder [] (text config.filterPlaceholder)
+                        , placeholder =
+                            config.filterPlaceholder
+                                |> Maybe.map (text >> Input.placeholder [])
                         , label = Input.labelHidden "Filter List"
                         }
 

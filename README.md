@@ -17,7 +17,7 @@ cd examples/
 elm reactor
 ```
 
-go to http://localhost:8080
+go to http://localhost:8000
 
 ## License
 
