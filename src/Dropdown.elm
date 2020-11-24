@@ -4,6 +4,7 @@ module Dropdown exposing
     , Config, basic, filterable
     , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
     , update, view
+    , custom
     )
 
 {-| Elm UI Dropdown.
@@ -126,23 +127,75 @@ init id =
     Dropdown.basic DropdownMsg OptionPicked Element.text Element.text
 
 -}
-basic : (Msg item -> msg) -> (Maybe item -> msg) -> (item -> Element msg) -> (Bool -> Bool -> item -> Element msg) -> Config item msg
+basic :
+    (Msg item -> msg)
+    -> (Maybe item -> msg)
+    -> (item -> Element msg)
+    -> (Bool -> Bool -> item -> Element msg)
+    -> Config item msg
 basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
     Config
-        { dropdownType = Basic
-        , promptElement = el [ width fill ] (text "-- Select --")
-        , filterPlaceholder = Nothing
-        , dropdownMsg = dropdownMsg
-        , onSelectMsg = onSelectMsg
+        { closeButton = text "▲"
         , containerAttributes = []
-        , selectAttributes = []
-        , listAttributes = []
-        , searchAttributes = []
-        , itemToPrompt = itemToPrompt
+        , dropdownMsg = dropdownMsg
+        , dropdownType = Basic
+        , filterPlaceholder = Nothing
         , itemToElement = itemToElement
-        , openButton = text "▼"
-        , closeButton = text "▲"
+        , itemToPrompt = itemToPrompt
         , itemToText = \_ -> ""
+        , listAttributes = []
+        , onSelectMsg = onSelectMsg
+        , openButton = text "▼"
+        , promptElement = el [ width fill ] (text "-- Select --")
+        , searchAttributes = []
+        , selectAttributes = []
+        }
+
+
+{-| Create a basic dropdown with custom configuration. This takes:
+
+    - The message to wrap all the internal messages of the dropdown
+    - A message to trigger when an item is selected
+    - A function to get the Element to display from an item, to be used in the select part of the dropdown
+    - A function to get the Element to display from an item, to be used in the item list of the dropdown
+    - An element to display as close button
+    - An element to display as open button
+    - An element to be used in the prompt
+    - A list of attributes to be passed to the container element.
+    - A list of attributes to be passed to the list element.
+    - A list of attributes to be passed to the search element.
+    - A list of attributes to be passed to the select element.
+
+-}
+custom :
+    (Msg item -> msg)
+    -> (Maybe item -> msg)
+    -> (item -> Element msg)
+    -> (Bool -> Bool -> item -> Element msg)
+    -> Element msg
+    -> Element msg
+    -> Element msg
+    -> List (Attribute msg)
+    -> List (Attribute msg)
+    -> List (Attribute msg)
+    -> List (Attribute msg)
+    -> Config item msg
+custom dropdownMsg onSelectMsg itemToPrompt itemToElement closeBtn openBtn promptElement containerAttributes listAttributes searchAttributes selectAttributes =
+    Config
+        { closeButton = closeBtn
+        , containerAttributes = containerAttributes
+        , dropdownMsg = dropdownMsg
+        , dropdownType = Basic
+        , filterPlaceholder = Nothing
+        , itemToElement = itemToElement
+        , itemToPrompt = itemToPrompt
+        , itemToText = \_ -> ""
+        , listAttributes = listAttributes
+        , onSelectMsg = onSelectMsg
+        , openButton = openBtn
+        , promptElement = el [ width fill ] promptElement
+        , searchAttributes = searchAttributes
+        , selectAttributes = selectAttributes
         }
 
 
@@ -157,7 +210,13 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
     Dropdown.basic DropdownMsg OptionPicked Element.text Element.text
 
 -}
-filterable : (Msg item -> msg) -> (Maybe item -> msg) -> (item -> Element msg) -> (Bool -> Bool -> item -> Element msg) -> (item -> String) -> Config item msg
+filterable :
+    (Msg item -> msg)
+    -> (Maybe item -> msg)
+    -> (item -> Element msg)
+    -> (Bool -> Bool -> item -> Element msg)
+    -> (item -> String)
+    -> Config item msg
 filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
     Config
         { dropdownType = Filterable
