@@ -2,11 +2,14 @@
 
 This is an implementation of a configurable dropdown for use with the Elm UI package.
 
-It tries to follow the advice from 
+![preview](preview.png)
+
+https://package.elm-lang.org/packages/PaackEng/elm-ui-dropdown/1.1.0/
+
+It tries to follow the advice from
 
 https://github.com/evancz/elm-sortable-table
 https://medium.com/elm-shorts/a-reusable-dropdown-in-elm-part-1-d7ac2d106f13
-
 
 ## Examples
 
