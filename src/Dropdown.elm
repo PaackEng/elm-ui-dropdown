@@ -4,7 +4,7 @@ module Dropdown exposing
     , Config, basic, filterable
     , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
     , update, view
-    , custom
+    , CustomBasicConfig, custom
     )
 
 {-| Elm UI Dropdown.
@@ -38,6 +38,21 @@ type alias InternalState item =
     , selectedItem : Maybe item
     , filterText : String
     , focusedIndex : Int
+    }
+
+
+type alias CustomBasicConfig item msg =
+    { closeButton : Element msg
+    , containerAttributes : List (Attribute msg)
+    , dropdownMsg : Msg item -> msg
+    , itemToElement : Bool -> Bool -> item -> Element msg
+    , itemToPrompt : item -> Element msg
+    , listAttributes : List (Attribute msg)
+    , onSelectMsg : Maybe item -> msg
+    , openButton : Element msg
+    , promptElement : Element msg
+    , searchAttributes : List (Attribute msg)
+    , selectAttributes : List (Attribute msg)
     }
 
 
@@ -152,7 +167,7 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
         }
 
 
-{-| Create a basic dropdown with custom configuration. This takes:
+{-| Create a basic dropdown with custom configuration. This a config with:
 
     - The message to wrap all the internal messages of the dropdown
     - A message to trigger when an item is selected
@@ -167,35 +182,23 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
     - A list of attributes to be passed to the select element.
 
 -}
-custom :
-    (Msg item -> msg)
-    -> (Maybe item -> msg)
-    -> (item -> Element msg)
-    -> (Bool -> Bool -> item -> Element msg)
-    -> Element msg
-    -> Element msg
-    -> Element msg
-    -> List (Attribute msg)
-    -> List (Attribute msg)
-    -> List (Attribute msg)
-    -> List (Attribute msg)
-    -> Config item msg
-custom dropdownMsg onSelectMsg itemToPrompt itemToElement closeBtn openBtn promptElement containerAttributes listAttributes searchAttributes selectAttributes =
+custom : CustomBasicConfig item msg -> Config item msg
+custom cnf =
     Config
-        { closeButton = closeBtn
-        , containerAttributes = containerAttributes
-        , dropdownMsg = dropdownMsg
+        { closeButton = cnf.closeButton
+        , containerAttributes = cnf.containerAttributes
+        , dropdownMsg = cnf.dropdownMsg
         , dropdownType = Basic
         , filterPlaceholder = Nothing
-        , itemToElement = itemToElement
-        , itemToPrompt = itemToPrompt
+        , itemToElement = cnf.itemToElement
+        , itemToPrompt = cnf.itemToPrompt
         , itemToText = \_ -> ""
-        , listAttributes = listAttributes
-        , onSelectMsg = onSelectMsg
-        , openButton = openBtn
-        , promptElement = el [ width fill ] promptElement
-        , searchAttributes = searchAttributes
-        , selectAttributes = selectAttributes
+        , listAttributes = cnf.listAttributes
+        , onSelectMsg = cnf.onSelectMsg
+        , openButton = cnf.openButton
+        , promptElement = el [ width fill ] cnf.promptElement
+        , searchAttributes = cnf.searchAttributes
+        , selectAttributes = cnf.selectAttributes
         }
 
 
@@ -219,20 +222,20 @@ filterable :
     -> Config item msg
 filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
     Config
-        { dropdownType = Filterable
-        , promptElement = el [ width fill ] (text "-- Select --")
-        , filterPlaceholder = Just "Filter values"
-        , dropdownMsg = dropdownMsg
-        , onSelectMsg = onSelectMsg
+        { closeButton = text "▲"
         , containerAttributes = []
-        , selectAttributes = []
-        , listAttributes = []
-        , searchAttributes = []
-        , itemToPrompt = itemToPrompt
+        , dropdownMsg = dropdownMsg
+        , dropdownType = Filterable
+        , filterPlaceholder = Just "Filter values"
         , itemToElement = itemToElement
-        , openButton = text "▼"
-        , closeButton = text "▲"
+        , itemToPrompt = itemToPrompt
         , itemToText = itemToText
+        , listAttributes = []
+        , onSelectMsg = onSelectMsg
+        , openButton = text "▼"
+        , promptElement = el [ width fill ] (text "-- Select --")
+        , searchAttributes = []
+        , selectAttributes = []
         }
 
 
