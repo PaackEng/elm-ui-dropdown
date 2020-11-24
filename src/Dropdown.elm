@@ -167,19 +167,19 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
         }
 
 
-{-| Create a basic dropdown with custom configuration. This a config with:
+{-| Create a basic dropdown with custom configuration. This takes a config with:
 
-    - The message to wrap all the internal messages of the dropdown
-    - A message to trigger when an item is selected
-    - A function to get the Element to display from an item, to be used in the select part of the dropdown
-    - A function to get the Element to display from an item, to be used in the item list of the dropdown
-    - An element to display as close button
-    - An element to display as open button
-    - An element to be used in the prompt
-    - A list of attributes to be passed to the container element.
-    - A list of attributes to be passed to the list element.
-    - A list of attributes to be passed to the search element.
-    - A list of attributes to be passed to the select element.
+    - dropdownMsg: The message to wrap all the internal messages of the dropdown
+    - onSelectMsg: A message to trigger when an item is selected
+    - itemToPrompt: A function to get the Element to display from an item, to be used in the select part of the dropdown
+    - itemToElement: A function to get the Element to display from an item, to be used in the item list of the dropdown
+    - closeButton: An element to display as close button
+    - openButton: An element to display as open button
+    - promptElement: An element to be used in the prompt
+    - containerAttributes: A list of attributes to be passed to the container element.
+    - listAttributes: A list of attributes to be passed to the list element.
+    - searchAttributes: A list of attributes to be passed to the search element.
+    - selectAttributes: A list of attributes to be passed to the select element.
 
 -}
 custom : CustomBasicConfig item msg -> Config item msg
