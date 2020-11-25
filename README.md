@@ -4,8 +4,6 @@ This is an implementation of a configurable dropdown for use with the Elm UI pac
 
 ![preview](preview.png)
 
-https://package.elm-lang.org/packages/PaackEng/elm-ui-dropdown/1.1.0/
-
 It tries to follow the advice from
 
 https://github.com/evancz/elm-sortable-table
