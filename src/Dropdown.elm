@@ -1,17 +1,16 @@
 module Dropdown exposing
     ( State, init
     , Msg
-    , Config, basic, filterable
+    , Config, CustomBasicConfig, basic, custom, filterable
     , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
     , update, view
-    , CustomBasicConfig, custom
     )
 
 {-| Elm UI Dropdown.
 
 @docs State, init
 @docs Msg
-@docs Config, basic, filterable
+@docs Config, CustomBasicConfig, basic, custom, filterable
 @docs withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
 @docs update, view
 
@@ -41,6 +40,21 @@ type alias InternalState item =
     }
 
 
+{-| Type that holds the current custom config:
+
+    - dropdownMsg: The message to wrap all the internal messages of the dropdown
+    - onSelectMsg: A message to trigger when an item is selected
+    - itemToPrompt: A function to get the Element to display from an item, to be used in the select part of the dropdown
+    - itemToElement: A function to get the Element to display from an item, to be used in the item list of the dropdown
+    - closeButton: An element to display as close button
+    - openButton: An element to display as open button
+    - promptElement: An element to be used in the prompt
+    - containerAttributes: A list of attributes to be passed to the container element.
+    - listAttributes: A list of attributes to be passed to the list element.
+    - searchAttributes: A list of attributes to be passed to the search element.
+    - selectAttributes: A list of attributes to be passed to the select element.
+
+-}
 type alias CustomBasicConfig item msg =
     { closeButton : Element msg
     , containerAttributes : List (Attribute msg)
@@ -183,22 +197,22 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
 
 -}
 custom : CustomBasicConfig item msg -> Config item msg
-custom cnf =
+custom cfg =
     Config
-        { closeButton = cnf.closeButton
-        , containerAttributes = cnf.containerAttributes
-        , dropdownMsg = cnf.dropdownMsg
+        { closeButton = cfg.closeButton
+        , containerAttributes = cfg.containerAttributes
+        , dropdownMsg = cfg.dropdownMsg
         , dropdownType = Basic
         , filterPlaceholder = Nothing
-        , itemToElement = cnf.itemToElement
-        , itemToPrompt = cnf.itemToPrompt
+        , itemToElement = cfg.itemToElement
+        , itemToPrompt = cfg.itemToPrompt
         , itemToText = \_ -> ""
-        , listAttributes = cnf.listAttributes
-        , onSelectMsg = cnf.onSelectMsg
-        , openButton = cnf.openButton
-        , promptElement = el [ width fill ] cnf.promptElement
-        , searchAttributes = cnf.searchAttributes
-        , selectAttributes = cnf.selectAttributes
+        , listAttributes = cfg.listAttributes
+        , onSelectMsg = cfg.onSelectMsg
+        , openButton = cfg.openButton
+        , promptElement = el [ width fill ] cfg.promptElement
+        , searchAttributes = cfg.searchAttributes
+        , selectAttributes = cfg.selectAttributes
         }
 
 
