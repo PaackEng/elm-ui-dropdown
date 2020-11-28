@@ -24,14 +24,7 @@ type alias Model =
     , cityDropdownState : Dropdown.State String
     , country : Maybe Country
     , city : Maybe City
-    , openDropDown : OpenDropDown
     }
-
-
-type OpenDropDown
-    = AllClosed
-    | CountryDropDown
-    | CityDropDown
 
 
 init : () -> ( Model, Cmd Msg )
@@ -40,7 +33,6 @@ init _ =
       , cityDropdownState = Dropdown.init "city-dropdown"
       , country = Nothing
       , city = Nothing
-      , openDropDown = AllClosed
       }
     , Cmd.none
     )
@@ -82,8 +74,7 @@ countries =
 
 
 type Msg
-    = Toggle OpenDropDown
-    | CountryPicked (Maybe Country)
+    = CountryPicked (Maybe Country)
     | CityPicked (Maybe City)
     | CountryDropdownMsg (Dropdown.Msg String)
     | CityDropdownMsg (Dropdown.Msg String)
@@ -92,21 +83,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Toggle dropdown ->
-            let
-                newOpenDropDown =
-                    if model.openDropDown == dropdown then
-                        AllClosed
-
-                    else
-                        dropdown
-            in
-            ( { model
-                | openDropDown = newOpenDropDown
-              }
-            , Cmd.none
-            )
-
         CountryPicked country ->
             let
                 newCity =
@@ -116,21 +92,10 @@ update msg model =
                     else
                         model.city
             in
-            ( { model
-                | country = country
-                , city = newCity
-                , openDropDown = AllClosed
-              }
-            , Cmd.none
-            )
+            ( { model | country = country, city = newCity }, Cmd.none )
 
         CityPicked city ->
-            ( { model
-                | city = city
-                , openDropDown = AllClosed
-              }
-            , Cmd.none
-            )
+            ( { model | city = city }, Cmd.none )
 
         CountryDropdownMsg subMsg ->
             let
