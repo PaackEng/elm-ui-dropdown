@@ -48,7 +48,7 @@ jobs:
        run: yarn install
 
      - name: Run linter
-       run: npx elm-format --validate src/ example/
+       run: npx elm-format --validate src/ examples/
 
      - name: Run analyse
        run: npx elm-analyse
