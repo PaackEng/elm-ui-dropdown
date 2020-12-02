@@ -28,4 +28,4 @@ jobs:
        uses: actions/checkout@v2
 
      - name: Validate code
-       run: elm make examples/Example1.elm --output /dev/null
+       run: npx elm make examples/Example1.elm --output /dev/null
