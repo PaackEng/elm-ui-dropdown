@@ -19,6 +19,40 @@ jobs:
      - name: Validate docs
        run: npx elm make --docs=/tmp/docs.json
 
+  lint:
+   runs-on: ubuntu-latest
+   if: github.event.pull_request.draft == false
+
+   steps:
+     - name: Checkout
+       uses: actions/checkout@v2
+
+     - name: Setup Node
+       uses: actions/setup-node@v1
+       with:
+        node-version: '14'
+
+     - name: Get yarn cache directory path
+       id: yarn-cache-dir-path
+       run: echo "::set-output name=dir::$(yarn cache dir)"
+
+     - uses: actions/cache@v1
+       id: yarn-cache
+       with:
+        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-yarn-
+
+     - name: Install dependencies
+       run: yarn install
+
+     - name: Run linter
+       run: npx elm-format --validate src/ example/
+
+     - name: Run analyse
+       run: npx elm-analyse
+
   example1:
    runs-on: ubuntu-latest
    if: github.event.pull_request.draft == false
