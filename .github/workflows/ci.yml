@@ -53,7 +53,7 @@ jobs:
      - name: Run analyse
        run: npx elm-analyse
 
-  example1:
+  examples:
    runs-on: ubuntu-latest
    if: github.event.pull_request.draft == false
 
@@ -62,48 +62,7 @@ jobs:
        uses: actions/checkout@v2
 
      - name: Validate code
-       run: npx elm make examples/Example1.elm --output /dev/null
-
-  example2:
-   runs-on: ubuntu-latest
-   if: github.event.pull_request.draft == false
-
-   steps:
-     - name: Checkout
-       uses: actions/checkout@v2
-
-     - name: Validate code
-       run: npx elm make examples/Example2.elm --output /dev/null
-
-  example3:
-   runs-on: ubuntu-latest
-   if: github.event.pull_request.draft == false
-
-   steps:
-     - name: Checkout
-       uses: actions/checkout@v2
-
-     - name: Validate code
-       run: npx elm make examples/Example3.elm --output /dev/null
-
-  example4:
-   runs-on: ubuntu-latest
-   if: github.event.pull_request.draft == false
-
-   steps:
-     - name: Checkout
-       uses: actions/checkout@v2
-
-     - name: Validate code
-       run: npx elm make examples/Example4.elm --output /dev/null
-
-  example5:
-   runs-on: ubuntu-latest
-   if: github.event.pull_request.draft == false
-
-   steps:
-     - name: Checkout
-       uses: actions/checkout@v2
-
-     - name: Validate code
-       run: npx elm make examples/Example5.elm --output /dev/null
+       run: |
+        for f in examples/Example*.elm; do
+        npx elm make ${f} --output /dev/null;
+        done
