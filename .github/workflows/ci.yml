@@ -64,6 +64,6 @@ jobs:
      - name: Validate code
        run: |
         for f in examples/Example*.elm; do
-        echo "╰─λ Building: ${f}"
+        echo -e "\n╰─λ Building: ${f}"
         npx elm make $f --output /dev/null;
         done
