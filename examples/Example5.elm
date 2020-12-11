@@ -18,7 +18,7 @@ main =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    onMouseDown (Dropdown.outsideTarget DropdownMsg)
+    onMouseDown (Dropdown.outsideTarget "my-dropdown" DropdownMsg)
 
 
 type alias Model =
@@ -29,7 +29,7 @@ type alias Model =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { dropdownState = Dropdown.init "custom-dropdown", selectedOption = Nothing }, Cmd.none )
+    ( { dropdownState = Dropdown.init "my-dropdown", selectedOption = Nothing }, Cmd.none )
 
 
 options : List String

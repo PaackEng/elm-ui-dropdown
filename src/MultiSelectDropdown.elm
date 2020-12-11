@@ -577,16 +577,19 @@ isOutsideDropdown dropdownId =
         ]
 
 
-{-| Emits the internal event 'OnClickOutside' and closes the multi select dropdown, works well with subscriptions
+{-| Emits the internal event 'OnClickOutside' and closes the multi select dropdown, works well with subscriptions. Takes:
+
+    - dropdownId: Id of the HTML element from which you want to be notified whenever it is clicked outside!
+    - dropdownMsg: The message to wrap all the internal messages of the dropdown
 
     subscriptions : Model -> Sub Msg
     subscriptions model =
-        onMouseDown (Dropdown.outsideTarget DropdownMsg)
+        onMouseDown (Dropdown.outsideTarget "my-dropdown" DropdownMsg)
 
 -}
-outsideTarget : (Msg item -> msg) -> Decode.Decoder msg
-outsideTarget dropdownMsg =
-    Decode.field "target" (isOutsideDropdown "custom-dropdown")
+outsideTarget : String -> (Msg item -> msg) -> Decode.Decoder msg
+outsideTarget dropdownId dropdownMsg =
+    Decode.field "target" (isOutsideDropdown dropdownId)
         |> Decode.andThen
             (\isOutside ->
                 if isOutside then
