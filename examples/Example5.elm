@@ -1,18 +1,24 @@
 module Example5 exposing (..)
 
-import Browser exposing (sandbox)
-import Dropdown
+import Browser exposing (element)
+import Browser.Events exposing (onMouseDown)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Html exposing (Html)
+import MultiSelectDropdown as Dropdown
 
 
 main : Program () Model Msg
 main =
-    sandbox { init = init, view = view, update = update }
+    element { init = init, view = view, update = update, subscriptions = subscriptions }
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    onMouseDown (Dropdown.outsideTarget DropdownMsg)
 
 
 type alias Model =
@@ -21,11 +27,9 @@ type alias Model =
     }
 
 
-init : Model
-init =
-    { dropdownState = Dropdown.init "custom-dropdown"
-    , selectedOption = Nothing
-    }
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( { dropdownState = Dropdown.init "custom-dropdown", selectedOption = Nothing }, Cmd.none )
 
 
 options : List String
@@ -43,22 +47,22 @@ type Msg
     | DropdownMsg (Dropdown.Msg String)
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ChechboxChecked checked ->
-            model
+            ( model, Cmd.none )
 
         -- Do something fancy with the checkex option
         OptionPicked option ->
-            { model | selectedOption = option }
+            ( { model | selectedOption = option }, Cmd.none )
 
         DropdownMsg subMsg ->
             let
                 ( state, _ ) =
                     Dropdown.update dropdownConfig subMsg model.dropdownState options
             in
-            { model | dropdownState = state }
+            ( { model | dropdownState = state }, Cmd.none )
 
 
 
@@ -122,7 +126,7 @@ dropdownConfig =
         , containerAttributes = []
         , dropdownMsg = DropdownMsg
         , itemToElement = itemToElement
-        , itemToPrompt = always btn
+        , itemsToPrompt = always btn
         , listAttributes =
             [ Background.color white
             , Border.rounded 5
