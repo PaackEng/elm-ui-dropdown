@@ -15,9 +15,11 @@ main : Program () Model Msg
 main =
     element { init = init, view = view, update = update, subscriptions = subscriptions }
 
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
     onMouseDown (Dropdown.outsideTarget "my-dropdown" DropdownMsg)
+
 
 type alias Model =
     { dropdownState : Dropdown.State String
@@ -27,9 +29,11 @@ type alias Model =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ({ dropdownState = Dropdown.init "my-dropdown"
-    , selectedOption = Nothing
-    }, Cmd.none)
+    ( { dropdownState = Dropdown.init "my-dropdown"
+      , selectedOption = Nothing
+      }
+    , Cmd.none
+    )
 
 
 options : List String
@@ -51,18 +55,18 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ChechboxChecked checked ->
-            (model, Cmd.none)
+            ( model, Cmd.none )
 
         -- Do something fancy with the checkex option
         OptionPicked option ->
-            ({ model | selectedOption = option }, Cmd.none)
+            ( { model | selectedOption = option }, Cmd.none )
 
         DropdownMsg subMsg ->
             let
                 ( state, _ ) =
                     Dropdown.update dropdownConfig subMsg model.dropdownState options
             in
-            ({ model | dropdownState = state }, Cmd.none)
+            ( { model | dropdownState = state }, Cmd.none )
 
 
 
