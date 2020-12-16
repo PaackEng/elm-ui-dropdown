@@ -104,7 +104,9 @@ dropdownConfig =
             ]
 
         itemsToPrompt items =
-            text <| Maybe.withDefault "nothing selected" <| List.head items
+            List.head items
+                |> Maybe.withDefault "nothing selected"
+                |> text
 
         itemToElement selected highlighted i =
             let

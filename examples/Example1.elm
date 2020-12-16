@@ -83,9 +83,11 @@ dropdownConfig : Dropdown.Config String Msg
 dropdownConfig =
     let
         itemsToPrompt items =
-            Element.text <| Maybe.withDefault "nothing selected" <| List.head items
+            List.head items
+                |> Maybe.withDefault "nothing selected"
+                |> text
 
         itemToElement selected highlighted item =
-            Element.text item
+            text item
     in
     Dropdown.basic DropdownMsg OptionPicked itemsToPrompt itemToElement

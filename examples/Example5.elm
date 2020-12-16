@@ -1,7 +1,6 @@
 module Example5 exposing (..)
 
 import Browser exposing (element)
-import Browser.Events exposing (onMouseDown)
 import Dropdown
 import Element exposing (..)
 import Element.Background as Background
@@ -18,7 +17,7 @@ main =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    onMouseDown (Dropdown.outsideTarget "my-dropdown" DropdownMsg)
+    Dropdown.onOutsideDropdownClick model.dropdownState DropdownMsg
 
 
 type alias Model =
@@ -29,11 +28,7 @@ type alias Model =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { dropdownState = Dropdown.init "my-dropdown"
-      , selectedOption = Nothing
-      }
-    , Cmd.none
-    )
+    ( { dropdownState = Dropdown.init "my-dropdown", selectedOption = Nothing }, Cmd.none )
 
 
 options : List String

@@ -4,7 +4,7 @@ module Dropdown exposing
     , Config, CustomBasicConfig, basic, custom, filterable
     , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
     , update, view
-    , outsideTarget
+    , onOutsideDropdownClick
     )
 
 {-| Elm UI Dropdown.
@@ -14,11 +14,12 @@ module Dropdown exposing
 @docs Config, CustomBasicConfig, basic, custom, filterable
 @docs withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
 @docs update, view
-@docs outsideTarget
+@docs onOutsideDropdownClick
 
 -}
 
 import Browser.Dom as Dom
+import Browser.Events exposing (onMouseDown)
 import Element exposing (..)
 import Element.Events as Events
 import Element.Input as Input
@@ -731,13 +732,12 @@ isOutsideDropdown dropdownId =
 
 {-| Emits the internal event 'OnClickOutside' and closes the multi select dropdown, works well with subscriptions. Takes:
 
-  - dropdownId: Id of the HTML element from which you want to be notified whenever it is clicked outside!
-
-  - dropdownMsg: The message to wrap all the internal messages of the dropdown
+    - dropdownId: Id of the HTML element from which you want to be notified whenever it is clicked outside!
+    - dropdownMsg: The message to wrap all the internal messages of the dropdown
 
     subscriptions : Model -> Sub Msg
     subscriptions model =
-    onMouseDown (Dropdown.outsideTarget "my-dropdown" DropdownMsg)
+        onMouseDown (Dropdown.outsideTarget "my-dropdown" DropdownMsg)
 
 -}
 outsideTarget : String -> (Msg item -> msg) -> Decode.Decoder msg
@@ -751,3 +751,18 @@ outsideTarget dropdownId dropdownMsg =
                 else
                     Decode.fail "inside dropdown"
             )
+
+
+{-| Serves as a subscription to know when the user has clicked outside a certain dropdown
+
+    - dropdownState: State of the dropdown we want to subscribe to
+    - dropdownMsg: The message to wrap all the internal messages of the dropdown
+
+    subscriptions : Model -> Sub Msg
+    subscriptions model =
+        Dropdown.onOutsideDropdownClick model.dropdownState DropdownMsg
+
+-}
+onOutsideDropdownClick : State item -> (Msg item -> msg) -> Sub msg
+onOutsideDropdownClick (State state) dropdownMsg =
+    onMouseDown (outsideTarget state.id dropdownMsg)
