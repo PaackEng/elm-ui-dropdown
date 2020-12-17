@@ -103,10 +103,7 @@ dropdownConfig =
             , spacing 5
             ]
 
-        itemsToPrompt items =
-            List.head items
-                |> Maybe.withDefault "nothing selected"
-                |> text
+        itemToPrompt item = text item
 
         itemToElement selected highlighted i =
             let
@@ -130,7 +127,7 @@ dropdownConfig =
                 , el [ Font.size 16 ] (text i)
                 ]
     in
-    Dropdown.filterable DropdownMsg OptionPicked itemsToPrompt itemToElement identity
+    Dropdown.filterable DropdownMsg OptionPicked itemToPrompt itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withPromptElement (el [] (text "Select option"))
         |> Dropdown.withFilterPlaceholder "Type for option"

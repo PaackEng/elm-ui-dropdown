@@ -112,22 +112,7 @@ dropdownConfig =
         arrow icon =
             el [ Font.size 7, paddingEach { edges | left = 5 } ] icon
 
-        itemToElement selected highlighted item =
-            Input.checkbox []
-                { onChange = ChechboxChecked
-                , icon = Input.defaultCheckbox
-                , checked = selected
-                , label = Input.labelRight [ paddingEach { edges | left = 7 } ] <| text item
-                }
-    in
-    Dropdown.custom
-        { closeButton = arrow (text "▲")
-        , containerAttributes = []
-        , dropdownMsg = DropdownMsg
-        , isMultiSelect = True
-        , itemToElement = itemToElement
-        , itemsToPrompt = always btn
-        , listAttributes =
+        listAttrs =
             [ Background.color white
             , Border.rounded 5
             , padding 20
@@ -142,11 +127,8 @@ dropdownConfig =
                 , color = lightGrey
                 }
             ]
-        , onSelectMsg = OptionPicked
-        , openButton = arrow (text "▼")
-        , promptElement = el [ width fill ] btn
-        , searchAttributes = []
-        , selectAttributes =
+
+        selectAttrs =
             [ pointer
             , paddingXY 13 7
             , Background.color (rgb255 224 228 237)
@@ -156,4 +138,20 @@ dropdownConfig =
             , Element.focused
                 [ Background.color (rgb255 25 45 91), Font.color white ]
             ]
-        }
+
+        itemsToPrompt =
+            always btn
+
+        itemToElement selected highlighted item =
+            Input.checkbox []
+                { onChange = ChechboxChecked
+                , icon = Input.defaultCheckbox
+                , checked = selected
+                , label = Input.labelRight [ paddingEach { edges | left = 7 } ] <| text item
+                }
+    in
+    Dropdown.multi DropdownMsg OptionPicked itemsToPrompt itemToElement
+        |> Dropdown.withPromptElement btn
+        |> Dropdown.withListAttributes listAttrs
+        |> Dropdown.withSelectAttributes selectAttrs
+        |> Dropdown.withOpenCloseButtons { openButton = arrow (text "▼"), closeButton = arrow (text "▲") }

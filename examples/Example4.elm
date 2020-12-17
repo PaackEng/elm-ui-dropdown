@@ -113,10 +113,7 @@ dropdownConfig =
             , height (fill |> maximum 200)
             ]
 
-        itemsToPrompt items =
-            List.head items
-                |> Maybe.withDefault "nothing selected"
-                |> text
+        itemToPrompt item = text item
 
         itemToElement selected highlighted i =
             let
@@ -140,7 +137,7 @@ dropdownConfig =
                 , el [ Font.size 16 ] (text i)
                 ]
     in
-    Dropdown.filterable DropdownMsg OptionPicked itemsToPrompt itemToElement identity
+    Dropdown.filterable DropdownMsg OptionPicked itemToPrompt itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs

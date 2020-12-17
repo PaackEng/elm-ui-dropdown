@@ -1,7 +1,7 @@
 module Dropdown exposing
     ( State, init
     , Msg
-    , Config, CustomBasicConfig, basic, custom, filterable
+    , Config, CustomBasicConfig, basic, custom, filterable, multi
     , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
     , update, view
     , onOutsideClick
@@ -11,7 +11,7 @@ module Dropdown exposing
 
 @docs State, init
 @docs Msg
-@docs Config, CustomBasicConfig, basic, custom, filterable
+@docs Config, CustomBasicConfig, basic, custom, filterable, multi
 @docs withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
 @docs update, view
 @docs onOutsideClick
@@ -44,6 +44,13 @@ type alias InternalState item =
     }
 
 
+{-| Type that holds the handlers for single and multiple selects. |
+-}
+type OnSelectMsg msg item
+    = SingleItem (item -> Element msg)
+    | MultipleSelection (List item -> Element msg)
+
+
 {-| Type that holds the current custom config:
 
     - dropdownMsg: The message to wrap all the internal messages of the dropdown
@@ -63,9 +70,8 @@ type alias CustomBasicConfig item msg =
     { closeButton : Element msg
     , containerAttributes : List (Attribute msg)
     , dropdownMsg : Msg item -> msg
-    , isMultiSelect : Bool
     , itemToElement : Bool -> Bool -> item -> Element msg
-    , itemsToPrompt : List item -> Element msg
+    , selectionToPrompt : OnSelectMsg msg item
     , listAttributes : List (Attribute msg)
     , onSelectMsg : Maybe item -> msg
     , openButton : Element msg
@@ -96,12 +102,11 @@ type alias InternalConfig item msg =
     , selectAttributes : List (Attribute msg)
     , listAttributes : List (Attribute msg)
     , searchAttributes : List (Attribute msg)
-    , itemsToPrompt : List item -> Element msg
+    , selectionToPrompt : OnSelectMsg msg item
     , itemToElement : Bool -> Bool -> item -> Element msg
     , openButton : Element msg
     , closeButton : Element msg
     , itemToText : item -> String
-    , isMultiSelect : Bool
     }
 
 
@@ -166,10 +171,10 @@ init id =
 basic :
     (Msg item -> msg)
     -> (Maybe item -> msg)
-    -> (List item -> Element msg)
+    -> (item -> Element msg)
     -> (Bool -> Bool -> item -> Element msg)
     -> Config item msg
-basic dropdownMsg onSelectMsg itemsToPrompt itemToElement =
+basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
     Config
         { closeButton = text "▲"
         , containerAttributes = []
@@ -177,7 +182,7 @@ basic dropdownMsg onSelectMsg itemsToPrompt itemToElement =
         , dropdownType = Basic
         , filterPlaceholder = Nothing
         , itemToElement = itemToElement
-        , itemsToPrompt = itemsToPrompt
+        , selectionToPrompt = SingleItem itemToPrompt
         , itemToText = \_ -> ""
         , listAttributes = []
         , onSelectMsg = onSelectMsg
@@ -185,7 +190,41 @@ basic dropdownMsg onSelectMsg itemsToPrompt itemToElement =
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
         , selectAttributes = []
-        , isMultiSelect = False
+        }
+
+
+{-| Create a multiselect configuration. This takes:
+
+    - The message to wrap all the internal messages of the dropdown
+    - A message to trigger when an item is selected
+    - A function to get the Element to display from the list of selected items, to be used in the select part of the dropdown
+    - A function to get the Element to display from an item, to be used in the item list of the dropdown
+
+    Dropdown.multiselect DropdownMsg OptionsPicked Element.text Element.text
+
+-}
+multi :
+    (Msg item -> msg)
+    -> (Maybe item -> msg)
+    -> (List item -> Element msg)
+    -> (Bool -> Bool -> item -> Element msg)
+    -> Config item msg
+multi dropdownMsg onSelectMsg itemsToPrompt itemToElement =
+    Config
+        { closeButton = text "▲"
+        , containerAttributes = []
+        , dropdownMsg = dropdownMsg
+        , dropdownType = MultiSelect
+        , filterPlaceholder = Nothing
+        , itemToElement = itemToElement
+        , selectionToPrompt = MultipleSelection itemsToPrompt
+        , itemToText = \_ -> ""
+        , listAttributes = []
+        , onSelectMsg = onSelectMsg
+        , openButton = text "▼"
+        , promptElement = el [ width fill ] (text "-- Select --")
+        , searchAttributes = []
+        , selectAttributes = []
         }
 
 
@@ -193,7 +232,7 @@ basic dropdownMsg onSelectMsg itemsToPrompt itemToElement =
 
     - dropdownMsg: The message to wrap all the internal messages of the dropdown
     - onSelectMsg: A message to trigger when an item is selected
-    - itemsToPrompt: A function to get the Element to display from an item, to be used in the select part of the dropdown
+    - selectionToPrompt: A function to get the Element to display from an item, to be used in the select part of the dropdown
     - itemToElement: A function to get the Element to display from an item, to be used in the item list of the dropdown
     - closeButton: An element to display as close button
     - openButton: An element to display as open button
@@ -210,15 +249,10 @@ custom cfg =
         { closeButton = cfg.closeButton
         , containerAttributes = cfg.containerAttributes
         , dropdownMsg = cfg.dropdownMsg
-        , dropdownType =
-            if cfg.isMultiSelect then
-                MultiSelect
-
-            else
-                Basic
+        , dropdownType = Basic
         , filterPlaceholder = Nothing
         , itemToElement = cfg.itemToElement
-        , itemsToPrompt = cfg.itemsToPrompt
+        , selectionToPrompt = cfg.selectionToPrompt
         , itemToText = \_ -> ""
         , listAttributes = cfg.listAttributes
         , onSelectMsg = cfg.onSelectMsg
@@ -226,7 +260,6 @@ custom cfg =
         , promptElement = el [ width fill ] cfg.promptElement
         , searchAttributes = cfg.searchAttributes
         , selectAttributes = cfg.selectAttributes
-        , isMultiSelect = cfg.isMultiSelect
         }
 
 
@@ -244,11 +277,11 @@ custom cfg =
 filterable :
     (Msg item -> msg)
     -> (Maybe item -> msg)
-    -> (List item -> Element msg)
+    -> (item -> Element msg)
     -> (Bool -> Bool -> item -> Element msg)
     -> (item -> String)
     -> Config item msg
-filterable dropdownMsg onSelectMsg itemsToPrompt itemToElement itemToText =
+filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
     Config
         { closeButton = text "▲"
         , containerAttributes = []
@@ -256,7 +289,7 @@ filterable dropdownMsg onSelectMsg itemsToPrompt itemToElement itemToText =
         , dropdownType = Filterable
         , filterPlaceholder = Just "Filter values"
         , itemToElement = itemToElement
-        , itemsToPrompt = itemsToPrompt
+        , selectionToPrompt = SingleItem itemToPrompt
         , itemToText = itemToText
         , listAttributes = []
         , onSelectMsg = onSelectMsg
@@ -264,7 +297,6 @@ filterable dropdownMsg onSelectMsg itemsToPrompt itemToElement itemToText =
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
         , selectAttributes = []
-        , isMultiSelect = False
         }
 
 
@@ -346,13 +378,14 @@ withListAttributes attrs (Config config) =
     Config { config | listAttributes = attrs }
 
 
-closeOnlyIfNotMultiSelect : { a | isMultiSelect : Bool } -> { b | isOpen : Bool } -> Bool
+closeOnlyIfNotMultiSelect : { a | dropdownType : DropdownType } -> { b | isOpen : Bool } -> Bool
 closeOnlyIfNotMultiSelect config state =
-    if config.isMultiSelect then
-        state.isOpen
+    case config.dropdownType of
+        MultiSelect ->
+            state.isOpen
 
-    else
-        False
+        _ ->
+            False
 
 
 {-| Update the component state
@@ -538,7 +571,17 @@ triggerView config state =
                         config.promptElement
 
                     xs ->
-                        config.itemsToPrompt xs
+                        case config.selectionToPrompt of
+                            SingleItem f ->
+                                case List.head xs of
+                                    Nothing ->
+                                        config.promptElement
+
+                                    Just x ->
+                                        f x
+
+                            MultipleSelection f ->
+                                f xs
 
         search =
             case config.dropdownType of

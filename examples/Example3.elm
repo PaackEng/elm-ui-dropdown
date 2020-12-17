@@ -175,10 +175,7 @@ dropdownConfig dropdownMsg itemPickedMsg =
             , spacing 5
             ]
 
-        itemsToPrompt items =
-            List.head items
-                |> Maybe.withDefault "nothing selected"
-                |> text
+        itemToPrompt item = text item
 
         itemToElement selected highlighted i =
             let
@@ -200,7 +197,7 @@ dropdownConfig dropdownMsg itemPickedMsg =
                 ]
                 (text i)
     in
-    Dropdown.filterable dropdownMsg itemPickedMsg itemsToPrompt itemToElement identity
+    Dropdown.filterable dropdownMsg itemPickedMsg itemToPrompt itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs
