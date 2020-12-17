@@ -4,7 +4,7 @@ module Dropdown exposing
     , Config, CustomBasicConfig, basic, custom, filterable
     , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
     , update, view
-    , onOutsideDropdownClick
+    , onOutsideClick
     )
 
 {-| Elm UI Dropdown.
@@ -14,7 +14,7 @@ module Dropdown exposing
 @docs Config, CustomBasicConfig, basic, custom, filterable
 @docs withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
 @docs update, view
-@docs onOutsideDropdownClick
+@docs onOutsideClick
 
 -}
 
@@ -760,9 +760,9 @@ outsideTarget dropdownId dropdownMsg =
 
     subscriptions : Model -> Sub Msg
     subscriptions model =
-        Dropdown.onOutsideDropdownClick model.dropdownState DropdownMsg
+        Dropdown.onOutsideClick model.dropdownState DropdownMsg
 
 -}
-onOutsideDropdownClick : State item -> (Msg item -> msg) -> Sub msg
-onOutsideDropdownClick (State state) dropdownMsg =
+onOutsideClick : State item -> (Msg item -> msg) -> Sub msg
+onOutsideClick (State state) dropdownMsg =
     onMouseDown (outsideTarget state.id dropdownMsg)

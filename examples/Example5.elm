@@ -17,7 +17,7 @@ main =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Dropdown.onOutsideDropdownClick model.dropdownState DropdownMsg
+    Dropdown.onOutsideClick model.dropdownState DropdownMsg
 
 
 type alias Model =
