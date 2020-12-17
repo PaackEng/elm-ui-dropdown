@@ -113,7 +113,8 @@ dropdownConfig =
             , height (fill |> maximum 200)
             ]
 
-        itemToPrompt item = text item
+        itemToPrompt item =
+            text item
 
         itemToElement selected highlighted i =
             let

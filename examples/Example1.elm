@@ -82,7 +82,8 @@ view model =
 dropdownConfig : Dropdown.Config String Msg
 dropdownConfig =
     let
-        itemToPrompt item = text item
+        itemToPrompt item =
+            text item
 
         itemToElement selected highlighted item =
             text item

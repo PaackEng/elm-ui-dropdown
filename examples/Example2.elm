@@ -103,7 +103,8 @@ dropdownConfig =
             , spacing 5
             ]
 
-        itemToPrompt item = text item
+        itemToPrompt item =
+            text item
 
         itemToElement selected highlighted i =
             let
