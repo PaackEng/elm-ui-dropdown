@@ -83,9 +83,9 @@ dropdownConfig : Dropdown.Config String Msg
 dropdownConfig =
     let
         itemToPrompt item =
-            Element.text item
+            text item
 
         itemToElement selected highlighted item =
-            Element.text item
+            text item
     in
     Dropdown.basic DropdownMsg OptionPicked itemToPrompt itemToElement

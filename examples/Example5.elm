@@ -1,6 +1,6 @@
 module Example5 exposing (..)
 
-import Browser exposing (sandbox)
+import Browser exposing (element)
 import Dropdown
 import Element exposing (..)
 import Element.Background as Background
@@ -12,7 +12,12 @@ import Html exposing (Html)
 
 main : Program () Model Msg
 main =
-    sandbox { init = init, view = view, update = update }
+    element { init = init, view = view, update = update, subscriptions = subscriptions }
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Dropdown.onOutsideClick model.dropdownState DropdownMsg
 
 
 type alias Model =
@@ -21,11 +26,9 @@ type alias Model =
     }
 
 
-init : Model
-init =
-    { dropdownState = Dropdown.init "custom-dropdown"
-    , selectedOption = Nothing
-    }
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( { dropdownState = Dropdown.init "my-dropdown", selectedOption = Nothing }, Cmd.none )
 
 
 options : List String
@@ -43,22 +46,22 @@ type Msg
     | DropdownMsg (Dropdown.Msg String)
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ChechboxChecked checked ->
-            model
+            ( model, Cmd.none )
 
         -- Do something fancy with the checkex option
         OptionPicked option ->
-            { model | selectedOption = option }
+            ( { model | selectedOption = option }, Cmd.none )
 
         DropdownMsg subMsg ->
             let
                 ( state, _ ) =
                     Dropdown.update dropdownConfig subMsg model.dropdownState options
             in
-            { model | dropdownState = state }
+            ( { model | dropdownState = state }, Cmd.none )
 
 
 
@@ -109,21 +112,7 @@ dropdownConfig =
         arrow icon =
             el [ Font.size 7, paddingEach { edges | left = 5 } ] icon
 
-        itemToElement selected highlighted item =
-            Input.checkbox []
-                { onChange = ChechboxChecked
-                , icon = Input.defaultCheckbox
-                , checked = selected
-                , label = Input.labelRight [ paddingEach { edges | left = 7 } ] <| text item
-                }
-    in
-    Dropdown.custom
-        { closeButton = arrow (text "▲")
-        , containerAttributes = []
-        , dropdownMsg = DropdownMsg
-        , itemToElement = itemToElement
-        , itemToPrompt = always btn
-        , listAttributes =
+        listAttrs =
             [ Background.color white
             , Border.rounded 5
             , padding 20
@@ -138,11 +127,8 @@ dropdownConfig =
                 , color = lightGrey
                 }
             ]
-        , onSelectMsg = OptionPicked
-        , openButton = arrow (text "▼")
-        , promptElement = el [ width fill ] btn
-        , searchAttributes = []
-        , selectAttributes =
+
+        selectAttrs =
             [ pointer
             , paddingXY 13 7
             , Background.color (rgb255 224 228 237)
@@ -152,4 +138,20 @@ dropdownConfig =
             , Element.focused
                 [ Background.color (rgb255 25 45 91), Font.color white ]
             ]
-        }
+
+        itemsToPrompt =
+            always btn
+
+        itemToElement selected highlighted item =
+            Input.checkbox []
+                { onChange = ChechboxChecked
+                , icon = Input.defaultCheckbox
+                , checked = selected
+                , label = Input.labelRight [ paddingEach { edges | left = 7 } ] <| text item
+                }
+    in
+    Dropdown.multi DropdownMsg OptionPicked itemsToPrompt itemToElement
+        |> Dropdown.withPromptElement btn
+        |> Dropdown.withListAttributes listAttrs
+        |> Dropdown.withSelectAttributes selectAttrs
+        |> Dropdown.withOpenCloseButtons { openButton = arrow (text "▼"), closeButton = arrow (text "▲") }
