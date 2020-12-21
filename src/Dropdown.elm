@@ -1,7 +1,7 @@
 module Dropdown exposing
     ( State, init
     , Msg
-    , Config, CustomBasicConfig, basic, custom, filterable, multi
+    , Config, basic, filterable, multi
     , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
     , update, view
     , onOutsideClick
@@ -11,7 +11,7 @@ module Dropdown exposing
 
 @docs State, init
 @docs Msg
-@docs Config, CustomBasicConfig, basic, custom, filterable, multi
+@docs Config, basic, filterable, multi
 @docs withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
 @docs update, view
 @docs onOutsideClick
@@ -49,36 +49,6 @@ type alias InternalState item =
 type OnSelectMsg msg item
     = SingleItem (item -> Element msg)
     | MultipleSelection (List item -> Element msg)
-
-
-{-| Type that holds the current custom config:
-
-    - dropdownMsg: The message to wrap all the internal messages of the dropdown
-    - onSelectMsg: A message to trigger when an item is selected
-    - itemToPrompt: A function to get the Element to display from an item, to be used in the select part of the dropdown
-    - itemToElement: A function to get the Element to display from an item, to be used in the item list of the dropdown
-    - closeButton: An element to display as close button
-    - openButton: An element to display as open button
-    - promptElement: An element to be used in the prompt
-    - containerAttributes: A list of attributes to be passed to the container element.
-    - listAttributes: A list of attributes to be passed to the list element.
-    - searchAttributes: A list of attributes to be passed to the search element.
-    - selectAttributes: A list of attributes to be passed to the select element.
-
--}
-type alias CustomBasicConfig item msg =
-    { closeButton : Element msg
-    , containerAttributes : List (Attribute msg)
-    , dropdownMsg : Msg item -> msg
-    , itemToElement : Bool -> Bool -> item -> Element msg
-    , selectionToPrompt : OnSelectMsg msg item
-    , listAttributes : List (Attribute msg)
-    , onSelectMsg : Maybe item -> msg
-    , openButton : Element msg
-    , promptElement : Element msg
-    , searchAttributes : List (Attribute msg)
-    , selectAttributes : List (Attribute msg)
-    }
 
 
 {-| Opaque type that holds the current state
@@ -225,41 +195,6 @@ multi dropdownMsg onSelectMsg itemsToPrompt itemToElement =
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
         , selectAttributes = []
-        }
-
-
-{-| Create a basic dropdown with custom configuration. This takes a config with:
-
-    - dropdownMsg: The message to wrap all the internal messages of the dropdown
-    - onSelectMsg: A message to trigger when an item is selected
-    - selectionToPrompt: A function to get the Element to display from an item, to be used in the select part of the dropdown
-    - itemToElement: A function to get the Element to display from an item, to be used in the item list of the dropdown
-    - closeButton: An element to display as close button
-    - openButton: An element to display as open button
-    - promptElement: An element to be used in the prompt
-    - containerAttributes: A list of attributes to be passed to the container element.
-    - listAttributes: A list of attributes to be passed to the list element.
-    - searchAttributes: A list of attributes to be passed to the search element.
-    - selectAttributes: A list of attributes to be passed to the select element.
-
--}
-custom : CustomBasicConfig item msg -> Config item msg
-custom cfg =
-    Config
-        { closeButton = cfg.closeButton
-        , containerAttributes = cfg.containerAttributes
-        , dropdownMsg = cfg.dropdownMsg
-        , dropdownType = Basic
-        , filterPlaceholder = Nothing
-        , itemToElement = cfg.itemToElement
-        , selectionToPrompt = cfg.selectionToPrompt
-        , itemToText = \_ -> ""
-        , listAttributes = cfg.listAttributes
-        , onSelectMsg = cfg.onSelectMsg
-        , openButton = cfg.openButton
-        , promptElement = el [ width fill ] cfg.promptElement
-        , searchAttributes = cfg.searchAttributes
-        , selectAttributes = cfg.selectAttributes
         }
 
 
