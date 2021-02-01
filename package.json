@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/PaackEng/elm-ui-dropdown#readme",
   "devDependencies": {
-    "elm": "^0.19.1-4",
+    "elm": "^0.19.1-5",
     "elm-analyse": "^0.16.5",
     "elm-format": "^0.8.4"
   }
