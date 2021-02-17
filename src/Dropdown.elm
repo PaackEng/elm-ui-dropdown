@@ -27,6 +27,7 @@ import Html.Attributes
 import Html.Events
 import Json.Decode as Decode
 import Task
+import Maybe.Extra
 
 
 type DropdownType
@@ -46,10 +47,13 @@ type alias InternalState item =
 
 {-| Type that holds the handlers for single and multiple selects. |
 -}
-type OnSelectMsg msg item
-    = SingleItem (item -> Element msg)
-    | MultipleSelection (List item -> Element msg)
+type SelectionToPrompt item msg
+    = SingleItemPrompt (item -> Element msg)
+    | MultipleSelectionPrompt (List item -> Element msg)
 
+type OnSelectMsg item msg
+    = SingleItem (Maybe item -> msg)
+    | MultipleSelection (List item -> msg)
 
 {-| Opaque type that holds the current state
 
@@ -67,12 +71,12 @@ type alias InternalConfig item msg =
     , promptElement : Element msg
     , filterPlaceholder : Maybe String
     , dropdownMsg : Msg item -> msg
-    , onSelectMsg : Maybe item -> msg
+    , onSelectMsg : OnSelectMsg item msg
     , containerAttributes : List (Attribute msg)
     , selectAttributes : List (Attribute msg)
     , listAttributes : List (Attribute msg)
     , searchAttributes : List (Attribute msg)
-    , selectionToPrompt : OnSelectMsg msg item
+    , selectionToPrompt : SelectionToPrompt item msg
     , itemToElement : Bool -> Bool -> item -> Element msg
     , openButton : Element msg
     , closeButton : Element msg
@@ -152,10 +156,10 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
         , dropdownType = Basic
         , filterPlaceholder = Nothing
         , itemToElement = itemToElement
-        , selectionToPrompt = SingleItem itemToPrompt
+        , selectionToPrompt = SingleItemPrompt itemToPrompt
         , itemToText = \_ -> ""
         , listAttributes = []
-        , onSelectMsg = onSelectMsg
+        , onSelectMsg = SingleItem onSelectMsg
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
@@ -175,7 +179,7 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
 -}
 multi :
     (Msg item -> msg)
-    -> (Maybe item -> msg)
+    -> (List item -> msg)
     -> (List item -> Element msg)
     -> (Bool -> Bool -> item -> Element msg)
     -> Config item msg
@@ -187,10 +191,10 @@ multi dropdownMsg onSelectMsg itemsToPrompt itemToElement =
         , dropdownType = MultiSelect
         , filterPlaceholder = Nothing
         , itemToElement = itemToElement
-        , selectionToPrompt = MultipleSelection itemsToPrompt
+        , selectionToPrompt = MultipleSelectionPrompt itemsToPrompt
         , itemToText = \_ -> ""
         , listAttributes = []
-        , onSelectMsg = onSelectMsg
+        , onSelectMsg = MultipleSelection onSelectMsg
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
@@ -224,10 +228,10 @@ filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
         , dropdownType = Filterable
         , filterPlaceholder = Just "Filter values"
         , itemToElement = itemToElement
-        , selectionToPrompt = SingleItem itemToPrompt
+        , selectionToPrompt = SingleItemPrompt itemToPrompt
         , itemToText = itemToText
         , listAttributes = []
-        , onSelectMsg = onSelectMsg
+        , onSelectMsg = SingleItem onSelectMsg
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
@@ -363,14 +367,7 @@ update (Config config) msg (State state) data =
 
                 OnSelect item ->
                     let
-                        cmd =
-                            Task.succeed (Just item)
-                                |> Task.perform config.onSelectMsg
-                    in
-                    ( { state
-                        | isOpen = closeOnlyIfNotMultiSelect config state
-                        , selectedItems =
-                            case config.dropdownType of
+                        selectedItems_new = case config.dropdownType of
                                 MultiSelect ->
                                     -- if it was selected, we remove it from the list, otherwise include it
                                     if List.any ((==) item) state.selectedItems then
@@ -381,6 +378,17 @@ update (Config config) msg (State state) data =
 
                                 _ ->
                                     [ item ]
+                        cmd =
+                            (case config.onSelectMsg of
+                               SingleItem f -> f <| List.head <| selectedItems_new
+                               MultipleSelection f -> f <| selectedItems_new
+                            ) |> (\onSelectMsg ->
+                                Task.succeed onSelectMsg |> Task.perform identity
+                            )
+                    in
+                    ( { state
+                        | isOpen = closeOnlyIfNotMultiSelect config state
+                        , selectedItems = selectedItems_new
                       }
                     , cmd
                     )
@@ -427,23 +435,20 @@ update (Config config) msg (State state) data =
                                 |> List.head
                                 |> Maybe.map Tuple.second
 
-                        ( cmd, newSelectedItem ) =
+                        ( cmd, newSelectedItems ) =
                             case key of
                                 Enter ->
-                                    ( Task.succeed focusedItem
-                                        |> Task.perform config.onSelectMsg
-                                    , case focusedItem of
-                                        Nothing ->
-                                            []
-
-                                        Just item ->
-                                            [ item ]
+                                    (   (case config.onSelectMsg of
+                                            SingleItem f -> f <| focusedItem
+                                            MultipleSelection f -> f <| Maybe.Extra.toList <| focusedItem
+                                        ) |> (\onSelectMsg -> Task.succeed onSelectMsg |> Task.perform identity) -- this should probably send all items in multiselect rather than just selected item, but preserving current functionality for now
+                                    , focusedItem |> Maybe.Extra.toList
                                     )
 
                                 _ ->
                                     ( Cmd.none, state.selectedItems )
                     in
-                    ( { state | selectedItems = newSelectedItem, focusedIndex = newIndex, isOpen = isOpen }, cmd )
+                    ( { state | selectedItems = newSelectedItems, focusedIndex = newIndex, isOpen = isOpen }, cmd )
     in
     ( State newState, newCommand )
 
@@ -507,7 +512,7 @@ triggerView config state =
 
                     xs ->
                         case config.selectionToPrompt of
-                            SingleItem f ->
+                            SingleItemPrompt f ->
                                 case List.head xs of
                                     Nothing ->
                                         config.promptElement
@@ -515,7 +520,7 @@ triggerView config state =
                                     Just x ->
                                         f x
 
-                            MultipleSelection f ->
+                            MultipleSelectionPrompt f ->
                                 f xs
 
         search =

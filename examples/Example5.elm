@@ -22,13 +22,13 @@ subscriptions model =
 
 type alias Model =
     { dropdownState : Dropdown.State String
-    , selectedOption : Maybe String
+    , selectedOptions : List String
     }
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { dropdownState = Dropdown.init "my-dropdown", selectedOption = Nothing }, Cmd.none )
+    ( { dropdownState = Dropdown.init "my-dropdown", selectedOptions = [] }, Cmd.none )
 
 
 options : List String
@@ -41,7 +41,7 @@ options =
 
 
 type Msg
-    = OptionPicked (Maybe String)
+    = OptionsPicked (List String)
     | ChechboxChecked Bool
     | DropdownMsg (Dropdown.Msg String)
 
@@ -53,8 +53,8 @@ update msg model =
             ( model, Cmd.none )
 
         -- Do something fancy with the checkex option
-        OptionPicked option ->
-            ( { model | selectedOption = option }, Cmd.none )
+        OptionsPicked selectedOptions ->
+            ( { model | selectedOptions = selectedOptions }, Cmd.none )
 
         DropdownMsg subMsg ->
             let
@@ -150,7 +150,7 @@ dropdownConfig =
                 , label = Input.labelRight [ paddingEach { edges | left = 7 } ] <| text item
                 }
     in
-    Dropdown.multi DropdownMsg OptionPicked itemsToPrompt itemToElement
+    Dropdown.multi DropdownMsg OptionsPicked itemsToPrompt itemToElement
         |> Dropdown.withPromptElement btn
         |> Dropdown.withListAttributes listAttrs
         |> Dropdown.withSelectAttributes selectAttrs
