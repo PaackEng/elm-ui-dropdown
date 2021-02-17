@@ -148,12 +148,12 @@ view model =
 
 countryConfig : Dropdown.Config String Msg Model
 countryConfig =
-    dropdownConfig (.country) CountryDropdownMsg CountryPicked
+    dropdownConfig .country CountryDropdownMsg CountryPicked
 
 
 cityConfig : Dropdown.Config String Msg Model
 cityConfig =
-    dropdownConfig (.city) CityDropdownMsg CityPicked
+    dropdownConfig .city CityDropdownMsg CityPicked
 
 
 dropdownConfig : (Model -> Maybe String) -> (Dropdown.Msg String -> Msg) -> (Maybe String -> Msg) -> Dropdown.Config String Msg Model

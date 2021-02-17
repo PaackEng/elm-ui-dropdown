@@ -26,8 +26,8 @@ import Element.Input as Input
 import Html.Attributes
 import Html.Events
 import Json.Decode as Decode
-import Task
 import Maybe.Extra
+import Task
 
 
 type DropdownType
@@ -50,13 +50,16 @@ type SelectionToPrompt item msg
     = SingleItemToPrompt (item -> Element msg)
     | MultipleItemsToPrompt (List item -> Element msg)
 
+
 type OnSelectMsg item msg
     = OnSelectSingleItem (Maybe item -> msg)
     | OnSelectMultipleItems (List item -> msg)
 
+
 type Selection item
     = SingleItem (Maybe item)
     | MultipleItems (List item)
+
 
 {-| Opaque type that holds the current state
 
@@ -66,7 +69,7 @@ type Selection item
 
 -}
 type State
-    = State (InternalState)
+    = State InternalState
 
 
 type alias InternalConfig item msg model =
@@ -75,7 +78,7 @@ type alias InternalConfig item msg model =
     , filterPlaceholder : Maybe String
     , dropdownMsg : Msg item -> msg
     , onSelectMsg : OnSelectMsg item msg
-    , selectionFromModel: model -> Selection item
+    , selectionFromModel : model -> Selection item
     , containerAttributes : List (Attribute msg)
     , selectAttributes : List (Attribute msg)
     , listAttributes : List (Attribute msg)
@@ -91,7 +94,7 @@ type alias InternalConfig item msg model =
 {-| Opaque type that holds the current config
 
     dropdownConfig =
-        Dropdown.basic (.selectedOption) DropdownMsg OptionPicked Element.text Element.text
+        Dropdown.basic .selectedOption DropdownMsg OptionPicked Element.text Element.text
 
 -}
 type Config item msg model
@@ -349,14 +352,18 @@ closeOnlyIfNotMultiSelect config state =
             ( { model | dropdownState = updated }, cmd )
 
 -}
-update : Config item msg model -> Msg item -> model -> State -> List item -> ( State , Cmd msg )
+update : Config item msg model -> Msg item -> model -> State -> List item -> ( State, Cmd msg )
 update (Config config) msg model (State state) data =
     let
-        selectedItems = case config.selectionFromModel model of
-            SingleItem maybeItem -> Maybe.Extra.toList maybeItem
-            MultipleItems listItems -> listItems
+        selectedItems =
+            case config.selectionFromModel model of
+                SingleItem maybeItem ->
+                    Maybe.Extra.toList maybeItem
 
-        modifySelectedItems selectedItem selectedItems_old  = 
+                MultipleItems listItems ->
+                    listItems
+
+        modifySelectedItems selectedItem selectedItems_old =
             case config.dropdownType of
                 MultiSelect ->
                     -- if it was selected, we remove it from the list, otherwise include it
@@ -371,11 +378,15 @@ update (Config config) msg model (State state) data =
 
         updateSelectedItemsCommand selectedItems_new =
             let
-                onSelectMsg = case config.onSelectMsg of
-                    OnSelectSingleItem itemToMsg -> itemToMsg <| List.head <| selectedItems_new
-                    OnSelectMultipleItems itemsToMsg -> itemsToMsg <| selectedItems_new
+                onSelectMsg =
+                    case config.onSelectMsg of
+                        OnSelectSingleItem itemToMsg ->
+                            itemToMsg <| List.head <| selectedItems_new
+
+                        OnSelectMultipleItems itemsToMsg ->
+                            itemsToMsg <| selectedItems_new
             in
-                Task.succeed onSelectMsg |> Task.perform identity
+            Task.succeed onSelectMsg |> Task.perform identity
 
         ( newState, newCommand ) =
             case msg of
@@ -404,9 +415,8 @@ update (Config config) msg model (State state) data =
 
                 OnSelect item ->
                     let
-
-                        selectedItems_new = modifySelectedItems item selectedItems
-
+                        selectedItems_new =
+                            modifySelectedItems item selectedItems
                     in
                     ( { state
                         | isOpen = closeOnlyIfNotMultiSelect config state
@@ -459,11 +469,17 @@ update (Config config) msg model (State state) data =
                         cmd =
                             case key of
                                 Enter ->
-                                    let selectedItems_new = case maybeFocusedItem of
-                                            Just focusedItem -> modifySelectedItems focusedItem selectedItems
-                                            Nothing -> selectedItems
+                                    let
+                                        selectedItems_new =
+                                            case maybeFocusedItem of
+                                                Just focusedItem ->
+                                                    modifySelectedItems focusedItem selectedItems
+
+                                                Nothing ->
+                                                    selectedItems
                                     in
-                                        updateSelectedItemsCommand selectedItems_new
+                                    updateSelectedItemsCommand selectedItems_new
+
                                 _ ->
                                     Cmd.none
                     in
@@ -480,11 +496,13 @@ update (Config config) msg model (State state) data =
 view : Config item msg model -> model -> State -> List item -> Element msg
 view (Config config) model (State state) data =
     let
-
-        selectedItems = 
+        selectedItems =
             case config.selectionFromModel model of
-               SingleItem maybeItem -> Maybe.Extra.toList maybeItem
-               MultipleItems listItems -> listItems
+                SingleItem maybeItem ->
+                    Maybe.Extra.toList maybeItem
+
+                MultipleItems listItems ->
+                    listItems
 
         containerAttrs =
             [ idAttr state.id

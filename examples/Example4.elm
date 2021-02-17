@@ -138,7 +138,7 @@ dropdownConfig =
                 , el [ Font.size 16 ] (text i)
                 ]
     in
-    Dropdown.filterable (.selectedOption) DropdownMsg OptionPicked itemToPrompt itemToElement identity
+    Dropdown.filterable .selectedOption DropdownMsg OptionPicked itemToPrompt itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs

@@ -150,7 +150,7 @@ dropdownConfig =
                 , label = Input.labelRight [ paddingEach { edges | left = 7 } ] <| text item
                 }
     in
-    Dropdown.multi (.selectedOptions) DropdownMsg OptionsPicked itemsToPrompt itemToElement
+    Dropdown.multi .selectedOptions DropdownMsg OptionsPicked itemsToPrompt itemToElement
         |> Dropdown.withPromptElement btn
         |> Dropdown.withListAttributes listAttrs
         |> Dropdown.withSelectAttributes selectAttrs
