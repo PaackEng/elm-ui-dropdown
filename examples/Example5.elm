@@ -21,14 +21,14 @@ subscriptions model =
 
 
 type alias Model =
-    { dropdownState : Dropdown.State String
+    { dropdownState : Dropdown.State
     , selectedOptions : List String
     }
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { dropdownState = Dropdown.init "my-dropdown", selectedOptions = [] }, Cmd.none )
+    ( { dropdownState = Dropdown.init "my-dropdown", selectedOptions = ["Option 1", "Option 2"] }, Cmd.none )
 
 
 options : List String
@@ -58,10 +58,10 @@ update msg model =
 
         DropdownMsg subMsg ->
             let
-                ( state, _ ) =
-                    Dropdown.update dropdownConfig subMsg model.dropdownState options
+                ( state, cmd ) =
+                    Dropdown.update dropdownConfig subMsg model model.dropdownState options
             in
-            ( { model | dropdownState = state }, Cmd.none )
+            ( { model | dropdownState = state }, cmd )
 
 
 
@@ -70,7 +70,7 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    Dropdown.view dropdownConfig model.dropdownState options
+    Dropdown.view dropdownConfig model model.dropdownState options
         |> el []
         |> layout []
 

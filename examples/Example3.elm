@@ -20,8 +20,8 @@ main =
 
 
 type alias Model =
-    { countryDropdownState : Dropdown.State String
-    , cityDropdownState : Dropdown.State String
+    { countryDropdownState : Dropdown.State
+    , cityDropdownState : Dropdown.State
     , country : Maybe Country
     , city : Maybe City
     }
@@ -100,7 +100,7 @@ update msg model =
         CountryDropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update countryConfig subMsg model.countryDropdownState countries
+                    Dropdown.update countryConfig subMsg model model.countryDropdownState countries
             in
             ( { model | countryDropdownState = state }, cmd )
 
@@ -112,7 +112,7 @@ update msg model =
                         |> Maybe.withDefault []
 
                 ( state, cmd ) =
-                    Dropdown.update cityConfig subMsg model.cityDropdownState cities
+                    Dropdown.update cityConfig subMsg model model.cityDropdownState cities
             in
             ( { model | cityDropdownState = state }, cmd )
 
@@ -139,8 +139,8 @@ view model =
                 |> Maybe.withDefault []
     in
     row []
-        [ Dropdown.view countryConfig model.countryDropdownState countries
-        , Dropdown.view cityConfig model.cityDropdownState cities
+        [ Dropdown.view countryConfig model model.countryDropdownState countries
+        , Dropdown.view cityConfig model model.cityDropdownState cities
         ]
         |> el [ width fill, height fill, padding 20 ]
         |> layout []

@@ -36,10 +36,9 @@ type DropdownType
     | MultiSelect
 
 
-type alias InternalState item =
+type alias InternalState =
     { id : String
     , isOpen : Bool
-    , selectedItems : List item
     , filterText : String
     , focusedIndex : Int
     }
@@ -62,12 +61,12 @@ type Selection item
 {-| Opaque type that holds the current state
 
     type alias Model =
-        { dropdownState : Dropdown.State String
+        { dropdownState : Dropdown.State
         }
 
 -}
-type State item
-    = State (InternalState item)
+type State
+    = State (InternalState)
 
 
 type alias InternalConfig item msg model =
@@ -126,12 +125,11 @@ type Key
     }
 
 -}
-init : String -> State item
+init : String -> State
 init id =
     State
         { id = id
         , isOpen = False
-        , selectedItems = []
         , filterText = ""
         , focusedIndex = 0
         }
@@ -348,9 +346,13 @@ closeOnlyIfNotMultiSelect config state =
             ( { model | dropdownState = updated }, cmd )
 
 -}
-update : Config item msg model -> Msg item -> State item -> List item -> ( State item, Cmd msg )
-update (Config config) msg (State state) data =
+update : Config item msg model -> Msg item -> model -> State -> List item -> ( State , Cmd msg )
+update (Config config) msg model (State state) data =
     let
+        selectedItems = case config.selected model of
+            SingleItem maybeItem -> Maybe.Extra.toList maybeItem
+            MultipleSelection listItems -> listItems
+
         ( newState, newCommand ) =
             case msg of
                 NoOp ->
@@ -378,17 +380,19 @@ update (Config config) msg (State state) data =
 
                 OnSelect item ->
                     let
+
                         selectedItems_new = case config.dropdownType of
                                 MultiSelect ->
                                     -- if it was selected, we remove it from the list, otherwise include it
-                                    if List.any ((==) item) state.selectedItems then
-                                        List.filter ((/=) item) state.selectedItems
+                                    if List.any ((==) item) selectedItems then
+                                        List.filter ((/=) item) selectedItems
 
                                     else
-                                        item :: state.selectedItems
+                                        item :: selectedItems
 
                                 _ ->
                                     [ item ]
+
                         cmd =
                             (case config.onSelectMsg of
                                OnSelectSingleItem f -> f <| List.head <| selectedItems_new
@@ -399,7 +403,6 @@ update (Config config) msg (State state) data =
                     in
                     ( { state
                         | isOpen = closeOnlyIfNotMultiSelect config state
-                        , selectedItems = selectedItems_new
                       }
                     , cmd
                     )
@@ -457,9 +460,9 @@ update (Config config) msg (State state) data =
                                     )
 
                                 _ ->
-                                    ( Cmd.none, state.selectedItems )
+                                    ( Cmd.none, selectedItems )
                     in
-                    ( { state | selectedItems = newSelectedItems, focusedIndex = newIndex, isOpen = isOpen }, cmd )
+                    ( { state | focusedIndex = newIndex, isOpen = isOpen }, cmd )
     in
     ( State newState, newCommand )
 
@@ -469,9 +472,15 @@ update (Config config) msg (State state) data =
     Dropdown.view dropdownConfig model.dropdownState model.items
 
 -}
-view : Config item msg model -> State item -> List item -> Element msg
-view (Config config) (State state) data =
+view : Config item msg model -> model -> State -> List item -> Element msg
+view (Config config) model (State state) data =
     let
+
+        selectedItems = 
+            case config.selected model of
+               SingleItem maybeItem -> Maybe.Extra.toList maybeItem
+               MultipleSelection listItems -> listItems
+
         containerAttrs =
             [ idAttr state.id
             , below body
@@ -487,10 +496,10 @@ view (Config config) (State state) data =
                 |> List.filter filter
 
         trigger =
-            triggerView config state
+            triggerView config selectedItems state
 
         body =
-            bodyView config state filteredData
+            bodyView config selectedItems state filteredData
     in
     column
         containerAttrs
@@ -498,8 +507,8 @@ view (Config config) (State state) data =
         ]
 
 
-triggerView : InternalConfig item msg model -> InternalState item -> Element msg
-triggerView config state =
+triggerView : InternalConfig item msg model -> List item -> InternalState -> Element msg
+triggerView config selectedItems state =
     let
         selectAttrs =
             [ onClick (config.dropdownMsg OnClickPrompt)
@@ -517,7 +526,7 @@ triggerView config state =
 
         prompt =
             el [ width fill ] <|
-                case state.selectedItems of
+                case selectedItems of
                     [] ->
                         config.promptElement
 
@@ -569,14 +578,14 @@ triggerView config state =
     row selectAttrs [ promptOrSearch, button ]
 
 
-bodyView : InternalConfig item msg model -> InternalState item -> List item -> Element msg
-bodyView config state data =
+bodyView : InternalConfig item msg model -> List item -> InternalState -> List item -> Element msg
+bodyView config selectedItems state data =
     if state.isOpen then
         let
             items =
                 column
                     config.listAttributes
-                    (List.indexedMap (itemView config state) data)
+                    (List.indexedMap (itemView config selectedItems state) data)
 
             body =
                 el
@@ -591,8 +600,8 @@ bodyView config state data =
         none
 
 
-itemView : InternalConfig item msg model -> InternalState item -> Int -> item -> Element msg
-itemView config state i item =
+itemView : InternalConfig item msg model -> List item -> InternalState -> Int -> item -> Element msg
+itemView config selectedItems state i item =
     let
         itemAttrs =
             [ onClick <| config.dropdownMsg (OnSelect item)
@@ -602,7 +611,7 @@ itemView config state i item =
             ]
 
         selected =
-            List.member item state.selectedItems
+            List.member item selectedItems
 
         highlighed =
             i == state.focusedIndex
@@ -633,7 +642,7 @@ referenceDataName =
     "data-dropdown-id"
 
 
-referenceAttr : InternalState item -> Attribute msg
+referenceAttr : InternalState -> Attribute msg
 referenceAttr model =
     Html.Attributes.attribute referenceDataName model.id
         |> htmlAttribute
@@ -684,7 +693,7 @@ onKeyDown msg =
         |> htmlAttribute
 
 
-onBlurAttribute : InternalConfig item msg model -> InternalState item -> Attribute msg
+onBlurAttribute : InternalConfig item msg model -> InternalState -> Attribute msg
 onBlurAttribute config state =
     let
         -- relatedTarget only works if element has tabindex
@@ -757,6 +766,6 @@ outsideTarget dropdownId dropdownMsg =
         Dropdown.onOutsideClick model.dropdownState DropdownMsg
 
 -}
-onOutsideClick : State item -> (Msg item -> msg) -> Sub msg
+onOutsideClick : State -> (Msg item -> msg) -> Sub msg
 onOutsideClick (State state) dropdownMsg =
     onMouseDown (outsideTarget state.id dropdownMsg)
