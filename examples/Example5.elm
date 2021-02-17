@@ -28,7 +28,7 @@ type alias Model =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { dropdownState = Dropdown.init "my-dropdown", selectedOptions = ["Option 1", "Option 2"] }, Cmd.none )
+    ( { dropdownState = Dropdown.init "my-dropdown", selectedOptions = options |> List.take 2 }, Cmd.none )
 
 
 options : List String
