@@ -79,7 +79,7 @@ view model =
         |> layout []
 
 
-dropdownConfig : Dropdown.Config String Msg
+dropdownConfig : Dropdown.Config String Msg Model
 dropdownConfig =
     let
         itemToPrompt item =
@@ -88,4 +88,4 @@ dropdownConfig =
         itemToElement selected highlighted item =
             text item
     in
-    Dropdown.basic DropdownMsg OptionPicked itemToPrompt itemToElement
+    Dropdown.basic (.selectedOption) DropdownMsg OptionPicked itemToPrompt itemToElement

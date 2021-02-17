@@ -87,7 +87,7 @@ view model =
         |> layout []
 
 
-dropdownConfig : Dropdown.Config String Msg
+dropdownConfig : Dropdown.Config String Msg Model
 dropdownConfig =
     let
         containerAttrs =
@@ -138,7 +138,7 @@ dropdownConfig =
                 , el [ Font.size 16 ] (text i)
                 ]
     in
-    Dropdown.filterable DropdownMsg OptionPicked itemToPrompt itemToElement identity
+    Dropdown.filterable (.selectedOption) DropdownMsg OptionPicked itemToPrompt itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs

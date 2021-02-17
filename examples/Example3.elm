@@ -146,18 +146,18 @@ view model =
         |> layout []
 
 
-countryConfig : Dropdown.Config String Msg
+countryConfig : Dropdown.Config String Msg Model
 countryConfig =
-    dropdownConfig CountryDropdownMsg CountryPicked
+    dropdownConfig (.country) CountryDropdownMsg CountryPicked
 
 
-cityConfig : Dropdown.Config String Msg
+cityConfig : Dropdown.Config String Msg Model
 cityConfig =
-    dropdownConfig CityDropdownMsg CityPicked
+    dropdownConfig (.city) CityDropdownMsg CityPicked
 
 
-dropdownConfig : (Dropdown.Msg String -> Msg) -> (Maybe String -> Msg) -> Dropdown.Config String Msg
-dropdownConfig dropdownMsg itemPickedMsg =
+dropdownConfig : (Model -> Maybe String ) -> (Dropdown.Msg String -> Msg) -> (Maybe String -> Msg) -> Dropdown.Config String Msg Model
+dropdownConfig selectedModel dropdownMsg itemPickedMsg =
     let
         containerAttrs =
             [ width (px 300) ]
@@ -198,7 +198,7 @@ dropdownConfig dropdownMsg itemPickedMsg =
                 ]
                 (text i)
     in
-    Dropdown.filterable dropdownMsg itemPickedMsg itemToPrompt itemToElement identity
+    Dropdown.filterable selectedModel dropdownMsg itemPickedMsg itemToPrompt itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs
