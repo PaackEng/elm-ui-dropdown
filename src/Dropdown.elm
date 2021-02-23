@@ -26,7 +26,6 @@ import Element.Input as Input
 import Html.Attributes
 import Html.Events
 import Json.Decode as Decode
-import Maybe.Extra
 import Task
 
 
@@ -332,16 +331,6 @@ withListAttributes attrs (Config config) =
     Config { config | listAttributes = attrs }
 
 
-closeOnlyIfNotMultiSelect : { a | dropdownType : DropdownType } -> { b | isOpen : Bool } -> Bool
-closeOnlyIfNotMultiSelect config state =
-    case config.dropdownType of
-        MultiSelect ->
-            state.isOpen
-
-        _ ->
-            False
-
-
 {-| Update the component state
 
     DropdownMsg subMsg ->
@@ -356,12 +345,7 @@ update : Config item msg model -> Msg item -> model -> State -> List item -> ( S
 update (Config config) msg model (State state) data =
     let
         selectedItems =
-            case config.selectionFromModel model of
-                SingleItem maybeItem ->
-                    Maybe.Extra.toList maybeItem
-
-                MultipleItems listItems ->
-                    listItems
+            selectedItemsAsList config model
 
         modifySelectedItems selectedItem selectedItems_old =
             case config.dropdownType of
@@ -488,6 +472,32 @@ update (Config config) msg model (State state) data =
     ( State newState, newCommand )
 
 
+
+-- update helpers
+
+
+selectedItemsAsList : { a | selectionFromModel : model -> Selection item } -> model -> List item
+selectedItemsAsList config model =
+    case config.selectionFromModel model of
+        SingleItem maybeItem ->
+            maybeItem
+                |> Maybe.map List.singleton
+                |> Maybe.withDefault []
+
+        MultipleItems listItems ->
+            listItems
+
+
+closeOnlyIfNotMultiSelect : { a | dropdownType : DropdownType } -> { b | isOpen : Bool } -> Bool
+closeOnlyIfNotMultiSelect config state =
+    case config.dropdownType of
+        MultiSelect ->
+            state.isOpen
+
+        _ ->
+            False
+
+
 {-| Render the view
 
     Dropdown.view dropdownConfig model model.dropdownState model.items
@@ -497,12 +507,7 @@ view : Config item msg model -> model -> State -> List item -> Element msg
 view (Config config) model (State state) data =
     let
         selectedItems =
-            case config.selectionFromModel model of
-                SingleItem maybeItem ->
-                    Maybe.Extra.toList maybeItem
-
-                MultipleItems listItems ->
-                    listItems
+            selectedItemsAsList config model
 
         containerAttrs =
             [ idAttr state.id
@@ -645,7 +650,7 @@ itemView config selectedItems state i item =
 
 
 
--- helpers
+-- view helpers
 
 
 idAttr : String -> Attribute msg
