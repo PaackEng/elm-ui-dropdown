@@ -347,31 +347,6 @@ update (Config config) msg model (State state) data =
         selectedItems =
             selectedItemsAsList config model
 
-        modifySelectedItems selectedItem selectedItems_old =
-            case config.dropdownType of
-                MultiSelect ->
-                    -- if it was selected, we remove it from the list, otherwise include it
-                    if List.any ((==) selectedItem) selectedItems_old then
-                        List.filter ((/=) selectedItem) selectedItems_old
-
-                    else
-                        selectedItem :: selectedItems_old
-
-                _ ->
-                    [ selectedItem ]
-
-        updateSelectedItemsCommand selectedItems_new =
-            let
-                onSelectMsg =
-                    case config.onSelectMsg of
-                        OnSelectSingleItem itemToMsg ->
-                            itemToMsg <| List.head <| selectedItems_new
-
-                        OnSelectMultipleItems itemsToMsg ->
-                            itemsToMsg <| selectedItems_new
-            in
-            Task.succeed onSelectMsg |> Task.perform identity
-
         ( newState, newCommand ) =
             case msg of
                 NoOp ->
@@ -399,13 +374,14 @@ update (Config config) msg model (State state) data =
 
                 OnSelect item ->
                     let
-                        selectedItems_new =
-                            modifySelectedItems item selectedItems
+                        selectedItemsNew =
+                            selectedItems
+                                |> modifySelectedItems config.dropdownType item
                     in
                     ( { state
                         | isOpen = closeOnlyIfNotMultiSelect config state
                       }
-                    , updateSelectedItemsCommand selectedItems_new
+                    , updateSelectedItemsCommand config.onSelectMsg selectedItemsNew
                     )
 
                 OnFilterTyped val ->
@@ -453,16 +429,14 @@ update (Config config) msg model (State state) data =
                         cmd =
                             case key of
                                 Enter ->
-                                    let
-                                        selectedItems_new =
-                                            case maybeFocusedItem of
-                                                Just focusedItem ->
-                                                    modifySelectedItems focusedItem selectedItems
+                                    case maybeFocusedItem of
+                                        Just focusedItem ->
+                                            selectedItems
+                                                |> modifySelectedItems config.dropdownType focusedItem
+                                                |> updateSelectedItemsCommand config.onSelectMsg
 
-                                                Nothing ->
-                                                    selectedItems
-                                    in
-                                    updateSelectedItemsCommand selectedItems_new
+                                        Nothing ->
+                                            Cmd.none
 
                                 _ ->
                                     Cmd.none
@@ -486,6 +460,35 @@ selectedItemsAsList config model =
 
         MultipleItems listItems ->
             listItems
+
+
+modifySelectedItems : DropdownType -> item -> List item -> List item
+modifySelectedItems dropdownType selectedItem selectedItemsOld =
+    case dropdownType of
+        MultiSelect ->
+            -- if it was selected, we remove it from the list, otherwise include it
+            if List.any ((==) selectedItem) selectedItemsOld then
+                List.filter ((/=) selectedItem) selectedItemsOld
+
+            else
+                selectedItem :: selectedItemsOld
+
+        _ ->
+            [ selectedItem ]
+
+
+updateSelectedItemsCommand : OnSelectMsg item msg -> List item -> Cmd msg
+updateSelectedItemsCommand onSelectMsg selectedItemsNew =
+    let
+        onSelectMsgWithItems =
+            case onSelectMsg of
+                OnSelectSingleItem itemToMsg ->
+                    itemToMsg <| List.head <| selectedItemsNew
+
+                OnSelectMultipleItems itemsToMsg ->
+                    itemsToMsg <| selectedItemsNew
+    in
+    Task.succeed onSelectMsgWithItems |> Task.perform identity
 
 
 closeOnlyIfNotMultiSelect : { a | dropdownType : DropdownType } -> { b | isOpen : Bool } -> Bool
