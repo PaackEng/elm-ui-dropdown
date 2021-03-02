@@ -20,7 +20,7 @@ main =
 
 
 type alias Model =
-    { dropdownState : Dropdown.State String
+    { dropdownState : Dropdown.State
     , selectedOption : Maybe String
     }
 
@@ -59,7 +59,7 @@ update msg model =
         DropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update dropdownConfig subMsg model.dropdownState options
+                    Dropdown.update dropdownConfig subMsg model model.dropdownState options
             in
             ( { model | dropdownState = state }, cmd )
 
@@ -81,13 +81,13 @@ view : Model -> Html Msg
 view model =
     column [ padding 20, spacing 20 ]
         [ el [] <| text <| "Selected Option: " ++ (model.selectedOption |> Maybe.withDefault "Nothing")
-        , Dropdown.view dropdownConfig model.dropdownState options
+        , Dropdown.view dropdownConfig model model.dropdownState options
         , el [] <| text "other content"
         ]
         |> layout []
 
 
-dropdownConfig : Dropdown.Config String Msg
+dropdownConfig : Dropdown.Config String Msg Model
 dropdownConfig =
     let
         containerAttrs =
@@ -138,7 +138,7 @@ dropdownConfig =
                 , el [ Font.size 16 ] (text i)
                 ]
     in
-    Dropdown.filterable DropdownMsg OptionPicked itemToPrompt itemToElement identity
+    Dropdown.filterable .selectedOption DropdownMsg OptionPicked itemToPrompt itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs

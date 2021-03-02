@@ -17,7 +17,7 @@ main =
 
 
 type alias Model =
-    { dropdownState : Dropdown.State String
+    { dropdownState : Dropdown.State
     , selectedOption : Maybe String
     }
 
@@ -54,7 +54,7 @@ update msg model =
         DropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update dropdownConfig subMsg model.dropdownState options
+                    Dropdown.update dropdownConfig subMsg model model.dropdownState options
             in
             ( { model | dropdownState = state }, cmd )
 
@@ -74,12 +74,12 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    Dropdown.view dropdownConfig model.dropdownState options
+    Dropdown.view dropdownConfig model model.dropdownState options
         |> el []
         |> layout []
 
 
-dropdownConfig : Dropdown.Config String Msg
+dropdownConfig : Dropdown.Config String Msg Model
 dropdownConfig =
     let
         itemToPrompt item =
@@ -88,4 +88,4 @@ dropdownConfig =
         itemToElement selected highlighted item =
             text item
     in
-    Dropdown.basic DropdownMsg OptionPicked itemToPrompt itemToElement
+    Dropdown.basic .selectedOption DropdownMsg OptionPicked itemToPrompt itemToElement

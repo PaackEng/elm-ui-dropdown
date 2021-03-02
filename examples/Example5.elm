@@ -21,14 +21,14 @@ subscriptions model =
 
 
 type alias Model =
-    { dropdownState : Dropdown.State String
-    , selectedOption : Maybe String
+    { dropdownState : Dropdown.State
+    , selectedOptions : List String
     }
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { dropdownState = Dropdown.init "my-dropdown", selectedOption = Nothing }, Cmd.none )
+    ( { dropdownState = Dropdown.init "my-dropdown", selectedOptions = options |> List.take 2 }, Cmd.none )
 
 
 options : List String
@@ -41,7 +41,7 @@ options =
 
 
 type Msg
-    = OptionPicked (Maybe String)
+    = OptionsPicked (List String)
     | ChechboxChecked Bool
     | DropdownMsg (Dropdown.Msg String)
 
@@ -53,15 +53,15 @@ update msg model =
             ( model, Cmd.none )
 
         -- Do something fancy with the checkex option
-        OptionPicked option ->
-            ( { model | selectedOption = option }, Cmd.none )
+        OptionsPicked selectedOptions ->
+            ( { model | selectedOptions = selectedOptions }, Cmd.none )
 
         DropdownMsg subMsg ->
             let
-                ( state, _ ) =
-                    Dropdown.update dropdownConfig subMsg model.dropdownState options
+                ( state, cmd ) =
+                    Dropdown.update dropdownConfig subMsg model model.dropdownState options
             in
-            ( { model | dropdownState = state }, Cmd.none )
+            ( { model | dropdownState = state }, cmd )
 
 
 
@@ -70,7 +70,7 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    Dropdown.view dropdownConfig model.dropdownState options
+    Dropdown.view dropdownConfig model model.dropdownState options
         |> el []
         |> layout []
 
@@ -106,7 +106,7 @@ btn =
         }
 
 
-dropdownConfig : Dropdown.Config String Msg
+dropdownConfig : Dropdown.Config String Msg Model
 dropdownConfig =
     let
         arrow icon =
@@ -150,7 +150,7 @@ dropdownConfig =
                 , label = Input.labelRight [ paddingEach { edges | left = 7 } ] <| text item
                 }
     in
-    Dropdown.multi DropdownMsg OptionPicked itemsToPrompt itemToElement
+    Dropdown.multi .selectedOptions DropdownMsg OptionsPicked itemsToPrompt itemToElement
         |> Dropdown.withPromptElement btn
         |> Dropdown.withListAttributes listAttrs
         |> Dropdown.withSelectAttributes selectAttrs

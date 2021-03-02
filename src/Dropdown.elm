@@ -35,44 +35,54 @@ type DropdownType
     | MultiSelect
 
 
-type alias InternalState item =
+type alias InternalState =
     { id : String
     , isOpen : Bool
-    , selectedItems : List item
     , filterText : String
     , focusedIndex : Int
     }
 
 
-{-| Type that holds the handlers for single and multiple selects. |
+{-| Types that hold the handlers for single and multiple selects. |
 -}
-type OnSelectMsg msg item
-    = SingleItem (item -> Element msg)
-    | MultipleSelection (List item -> Element msg)
+type SelectionToPrompt item msg
+    = SingleItemToPrompt (item -> Element msg)
+    | MultipleItemsToPrompt (List item -> Element msg)
+
+
+type OnSelectMsg item msg
+    = OnSelectSingleItem (Maybe item -> msg)
+    | OnSelectMultipleItems (List item -> msg)
+
+
+type Selection item
+    = SingleItem (Maybe item)
+    | MultipleItems (List item)
 
 
 {-| Opaque type that holds the current state
 
     type alias Model =
-        { dropdownState : Dropdown.State String
+        { dropdownState : Dropdown.State
         }
 
 -}
-type State item
-    = State (InternalState item)
+type State
+    = State InternalState
 
 
-type alias InternalConfig item msg =
+type alias InternalConfig item msg model =
     { dropdownType : DropdownType
     , promptElement : Element msg
     , filterPlaceholder : Maybe String
     , dropdownMsg : Msg item -> msg
-    , onSelectMsg : Maybe item -> msg
+    , onSelectMsg : OnSelectMsg item msg
+    , selectionFromModel : model -> Selection item
     , containerAttributes : List (Attribute msg)
     , selectAttributes : List (Attribute msg)
     , listAttributes : List (Attribute msg)
     , searchAttributes : List (Attribute msg)
-    , selectionToPrompt : OnSelectMsg msg item
+    , selectionToPrompt : SelectionToPrompt item msg
     , itemToElement : Bool -> Bool -> item -> Element msg
     , openButton : Element msg
     , closeButton : Element msg
@@ -83,11 +93,11 @@ type alias InternalConfig item msg =
 {-| Opaque type that holds the current config
 
     dropdownConfig =
-        Dropdown.basic DropdownMsg OptionPicked Element.text Element.text
+        Dropdown.basic .selectedOption DropdownMsg OptionPicked Element.text Element.text
 
 -}
-type Config item msg
-    = Config (InternalConfig item msg)
+type Config item msg model
+    = Config (InternalConfig item msg model)
 
 
 {-| Opaque type for the internal dropdown messages
@@ -117,12 +127,11 @@ type Key
     }
 
 -}
-init : String -> State item
+init : String -> State
 init id =
     State
         { id = id
         , isOpen = False
-        , selectedItems = []
         , filterText = ""
         , focusedIndex = 0
         }
@@ -130,6 +139,7 @@ init id =
 
 {-| Create a basic configuration. This takes:
 
+    - The function to get the selected item from the model
     - The message to wrap all the internal messages of the dropdown
     - A message to trigger when an item is selected
     - A function to get the Element to display from an item, to be used in the select part of the dropdown
@@ -139,12 +149,13 @@ init id =
 
 -}
 basic :
-    (Msg item -> msg)
+    (model -> Maybe item)
+    -> (Msg item -> msg)
     -> (Maybe item -> msg)
     -> (item -> Element msg)
     -> (Bool -> Bool -> item -> Element msg)
-    -> Config item msg
-basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
+    -> Config item msg model
+basic selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement =
     Config
         { closeButton = text "▲"
         , containerAttributes = []
@@ -152,10 +163,11 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
         , dropdownType = Basic
         , filterPlaceholder = Nothing
         , itemToElement = itemToElement
-        , selectionToPrompt = SingleItem itemToPrompt
+        , selectionToPrompt = SingleItemToPrompt itemToPrompt
         , itemToText = \_ -> ""
         , listAttributes = []
-        , onSelectMsg = onSelectMsg
+        , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , selectionFromModel = selectionFromModel >> SingleItem
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
@@ -165,6 +177,7 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
 
 {-| Create a multiselect configuration. This takes:
 
+    - The function to get the selected items from the model
     - The message to wrap all the internal messages of the dropdown
     - A message to trigger when an item is selected
     - A function to get the Element to display from the list of selected items, to be used in the select part of the dropdown
@@ -174,12 +187,13 @@ basic dropdownMsg onSelectMsg itemToPrompt itemToElement =
 
 -}
 multi :
-    (Msg item -> msg)
-    -> (Maybe item -> msg)
+    (model -> List item)
+    -> (Msg item -> msg)
+    -> (List item -> msg)
     -> (List item -> Element msg)
     -> (Bool -> Bool -> item -> Element msg)
-    -> Config item msg
-multi dropdownMsg onSelectMsg itemsToPrompt itemToElement =
+    -> Config item msg model
+multi selectionFromModel dropdownMsg onSelectMsg itemsToPrompt itemToElement =
     Config
         { closeButton = text "▲"
         , containerAttributes = []
@@ -187,10 +201,11 @@ multi dropdownMsg onSelectMsg itemsToPrompt itemToElement =
         , dropdownType = MultiSelect
         , filterPlaceholder = Nothing
         , itemToElement = itemToElement
-        , selectionToPrompt = MultipleSelection itemsToPrompt
+        , selectionToPrompt = MultipleItemsToPrompt itemsToPrompt
         , itemToText = \_ -> ""
         , listAttributes = []
-        , onSelectMsg = onSelectMsg
+        , onSelectMsg = OnSelectMultipleItems onSelectMsg
+        , selectionFromModel = selectionFromModel >> MultipleItems
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
@@ -200,6 +215,7 @@ multi dropdownMsg onSelectMsg itemsToPrompt itemToElement =
 
 {-| Create a filterable configuration. This takes:
 
+    - The function to get the selected item from the model
     - The message to wrap all the internal messages of the dropdown
     - A message to trigger when an item is selected
     - A function to get the Element to display from an item, to be used in the select part of the dropdown
@@ -210,13 +226,14 @@ multi dropdownMsg onSelectMsg itemsToPrompt itemToElement =
 
 -}
 filterable :
-    (Msg item -> msg)
+    (model -> Maybe item)
+    -> (Msg item -> msg)
     -> (Maybe item -> msg)
     -> (item -> Element msg)
     -> (Bool -> Bool -> item -> Element msg)
     -> (item -> String)
-    -> Config item msg
-filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
+    -> Config item msg model
+filterable selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
     Config
         { closeButton = text "▲"
         , containerAttributes = []
@@ -224,10 +241,11 @@ filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
         , dropdownType = Filterable
         , filterPlaceholder = Just "Filter values"
         , itemToElement = itemToElement
-        , selectionToPrompt = SingleItem itemToPrompt
+        , selectionToPrompt = SingleItemToPrompt itemToPrompt
         , itemToText = itemToText
         , listAttributes = []
-        , onSelectMsg = onSelectMsg
+        , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , selectionFromModel = selectionFromModel >> SingleItem
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
@@ -240,7 +258,7 @@ filterable dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
     Dropdown.withPromptElement (el [ Font.color (rgb255 123 123 123) ] <| text "Pick one") config
 
 -}
-withPromptElement : Element msg -> Config item msg -> Config item msg
+withPromptElement : Element msg -> Config item msg model -> Config item msg model
 withPromptElement promptElement (Config config) =
     Config { config | promptElement = promptElement }
 
@@ -250,7 +268,7 @@ withPromptElement promptElement (Config config) =
     Dropdown.withFilterPlaceholder "Type here..." config
 
 -}
-withFilterPlaceholder : String -> Config item msg -> Config item msg
+withFilterPlaceholder : String -> Config item msg model -> Config item msg model
 withFilterPlaceholder placeholderString (Config config) =
     let
         placeholder =
@@ -268,7 +286,7 @@ withFilterPlaceholder placeholderString (Config config) =
     Dropdown.withContainerAttributes [ width (px 300) ] config
 
 -}
-withContainerAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withContainerAttributes : List (Attribute msg) -> Config item msg model -> Config item msg model
 withContainerAttributes attrs (Config config) =
     Config { config | containerAttributes = attrs }
 
@@ -278,7 +296,7 @@ withContainerAttributes attrs (Config config) =
     Dropdown.withSelectAttributes [ Border.width 1, Border.rounded 5, paddingXY 16 8 ] config
 
 -}
-withSelectAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withSelectAttributes : List (Attribute msg) -> Config item msg model -> Config item msg model
 withSelectAttributes attrs (Config config) =
     Config { config | selectAttributes = attrs }
 
@@ -288,7 +306,7 @@ withSelectAttributes attrs (Config config) =
     Dropdown.withSearchAttributes [ Border.width 0, padding 0 ] config
 
 -}
-withSearchAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withSearchAttributes : List (Attribute msg) -> Config item msg model -> Config item msg model
 withSearchAttributes attrs (Config config) =
     Config { config | searchAttributes = attrs }
 
@@ -298,7 +316,7 @@ withSearchAttributes attrs (Config config) =
     Dropdown.withOpenCloseButtons { openButton = text "+", closeButton = "-" } config
 
 -}
-withOpenCloseButtons : { openButton : Element msg, closeButton : Element msg } -> Config item msg -> Config item msg
+withOpenCloseButtons : { openButton : Element msg, closeButton : Element msg } -> Config item msg model -> Config item msg model
 withOpenCloseButtons { openButton, closeButton } (Config config) =
     Config { config | openButton = openButton, closeButton = closeButton }
 
@@ -308,19 +326,9 @@ withOpenCloseButtons { openButton, closeButton } (Config config) =
     Dropdown.withListAttributes [ Border.width 1, Border.rounded ] config
 
 -}
-withListAttributes : List (Attribute msg) -> Config item msg -> Config item msg
+withListAttributes : List (Attribute msg) -> Config item msg model -> Config item msg model
 withListAttributes attrs (Config config) =
     Config { config | listAttributes = attrs }
-
-
-closeOnlyIfNotMultiSelect : { a | dropdownType : DropdownType } -> { b | isOpen : Bool } -> Bool
-closeOnlyIfNotMultiSelect config state =
-    case config.dropdownType of
-        MultiSelect ->
-            state.isOpen
-
-        _ ->
-            False
 
 
 {-| Update the component state
@@ -328,14 +336,17 @@ closeOnlyIfNotMultiSelect config state =
     DropdownMsg subMsg ->
         let
             ( updated, cmd ) =
-                Dropdown.update dropdownConfig subMsg model.dropdownState model.items
+                Dropdown.update dropdownConfig subMsg model model.dropdownState model.items
         in
             ( { model | dropdownState = updated }, cmd )
 
 -}
-update : Config item msg -> Msg item -> State item -> List item -> ( State item, Cmd msg )
-update (Config config) msg (State state) data =
+update : Config item msg model -> Msg item -> model -> State -> List item -> ( State, Cmd msg )
+update (Config config) msg model (State state) data =
     let
+        selectedItems =
+            selectedItemsAsList config model
+
         ( newState, newCommand ) =
             case msg of
                 NoOp ->
@@ -363,26 +374,14 @@ update (Config config) msg (State state) data =
 
                 OnSelect item ->
                     let
-                        cmd =
-                            Task.succeed (Just item)
-                                |> Task.perform config.onSelectMsg
+                        selectedItemsNew =
+                            selectedItems
+                                |> modifySelectedItems config.dropdownType item
                     in
                     ( { state
                         | isOpen = closeOnlyIfNotMultiSelect config state
-                        , selectedItems =
-                            case config.dropdownType of
-                                MultiSelect ->
-                                    -- if it was selected, we remove it from the list, otherwise include it
-                                    if List.any ((==) item) state.selectedItems then
-                                        List.filter ((/=) item) state.selectedItems
-
-                                    else
-                                        item :: state.selectedItems
-
-                                _ ->
-                                    [ item ]
                       }
-                    , cmd
+                    , updateSelectedItemsCommand config.onSelectMsg selectedItemsNew
                     )
 
                 OnFilterTyped val ->
@@ -420,42 +419,99 @@ update (Config config) msg (State state) data =
                                 _ ->
                                     True
 
-                        focusedItem =
+                        maybeFocusedItem =
                             data
                                 |> List.indexedMap (\i item -> ( i, item ))
                                 |> List.filter (\( i, _ ) -> i == state.focusedIndex)
                                 |> List.head
                                 |> Maybe.map Tuple.second
 
-                        ( cmd, newSelectedItem ) =
+                        cmd =
                             case key of
                                 Enter ->
-                                    ( Task.succeed focusedItem
-                                        |> Task.perform config.onSelectMsg
-                                    , case focusedItem of
-                                        Nothing ->
-                                            []
+                                    case maybeFocusedItem of
+                                        Just focusedItem ->
+                                            selectedItems
+                                                |> modifySelectedItems config.dropdownType focusedItem
+                                                |> updateSelectedItemsCommand config.onSelectMsg
 
-                                        Just item ->
-                                            [ item ]
-                                    )
+                                        Nothing ->
+                                            Cmd.none
 
                                 _ ->
-                                    ( Cmd.none, state.selectedItems )
+                                    Cmd.none
                     in
-                    ( { state | selectedItems = newSelectedItem, focusedIndex = newIndex, isOpen = isOpen }, cmd )
+                    ( { state | focusedIndex = newIndex, isOpen = isOpen }, cmd )
     in
     ( State newState, newCommand )
 
 
+
+-- update helpers
+
+
+selectedItemsAsList : { a | selectionFromModel : model -> Selection item } -> model -> List item
+selectedItemsAsList config model =
+    case config.selectionFromModel model of
+        SingleItem maybeItem ->
+            maybeItem
+                |> Maybe.map List.singleton
+                |> Maybe.withDefault []
+
+        MultipleItems listItems ->
+            listItems
+
+
+modifySelectedItems : DropdownType -> item -> List item -> List item
+modifySelectedItems dropdownType selectedItem selectedItemsOld =
+    case dropdownType of
+        MultiSelect ->
+            -- if it was selected, we remove it from the list, otherwise include it
+            if List.any ((==) selectedItem) selectedItemsOld then
+                List.filter ((/=) selectedItem) selectedItemsOld
+
+            else
+                selectedItem :: selectedItemsOld
+
+        _ ->
+            [ selectedItem ]
+
+
+updateSelectedItemsCommand : OnSelectMsg item msg -> List item -> Cmd msg
+updateSelectedItemsCommand onSelectMsg selectedItemsNew =
+    let
+        onSelectMsgWithItems =
+            case onSelectMsg of
+                OnSelectSingleItem itemToMsg ->
+                    itemToMsg <| List.head <| selectedItemsNew
+
+                OnSelectMultipleItems itemsToMsg ->
+                    itemsToMsg <| selectedItemsNew
+    in
+    Task.succeed onSelectMsgWithItems |> Task.perform identity
+
+
+closeOnlyIfNotMultiSelect : { a | dropdownType : DropdownType } -> { b | isOpen : Bool } -> Bool
+closeOnlyIfNotMultiSelect config state =
+    case config.dropdownType of
+        MultiSelect ->
+            state.isOpen
+
+        _ ->
+            False
+
+
 {-| Render the view
 
-    Dropdown.view dropdownConfig model.dropdownState model.items
+    Dropdown.view dropdownConfig model model.dropdownState model.items
 
 -}
-view : Config item msg -> State item -> List item -> Element msg
-view (Config config) (State state) data =
+view : Config item msg model -> model -> State -> List item -> Element msg
+view (Config config) model (State state) data =
     let
+        selectedItems =
+            selectedItemsAsList config model
+
         containerAttrs =
             [ idAttr state.id
             , below body
@@ -471,10 +527,10 @@ view (Config config) (State state) data =
                 |> List.filter filter
 
         trigger =
-            triggerView config state
+            triggerView config selectedItems state
 
         body =
-            bodyView config state filteredData
+            bodyView config selectedItems state filteredData
     in
     column
         containerAttrs
@@ -482,8 +538,8 @@ view (Config config) (State state) data =
         ]
 
 
-triggerView : InternalConfig item msg -> InternalState item -> Element msg
-triggerView config state =
+triggerView : InternalConfig item msg model -> List item -> InternalState -> Element msg
+triggerView config selectedItems state =
     let
         selectAttrs =
             [ onClick (config.dropdownMsg OnClickPrompt)
@@ -501,13 +557,13 @@ triggerView config state =
 
         prompt =
             el [ width fill ] <|
-                case state.selectedItems of
+                case selectedItems of
                     [] ->
                         config.promptElement
 
                     xs ->
                         case config.selectionToPrompt of
-                            SingleItem f ->
+                            SingleItemToPrompt f ->
                                 case List.head xs of
                                     Nothing ->
                                         config.promptElement
@@ -515,7 +571,7 @@ triggerView config state =
                                     Just x ->
                                         f x
 
-                            MultipleSelection f ->
+                            MultipleItemsToPrompt f ->
                                 f xs
 
         search =
@@ -553,14 +609,14 @@ triggerView config state =
     row selectAttrs [ promptOrSearch, button ]
 
 
-bodyView : InternalConfig item msg -> InternalState item -> List item -> Element msg
-bodyView config state data =
+bodyView : InternalConfig item msg model -> List item -> InternalState -> List item -> Element msg
+bodyView config selectedItems state data =
     if state.isOpen then
         let
             items =
                 column
                     config.listAttributes
-                    (List.indexedMap (itemView config state) data)
+                    (List.indexedMap (itemView config selectedItems state) data)
 
             body =
                 el
@@ -575,8 +631,8 @@ bodyView config state data =
         none
 
 
-itemView : InternalConfig item msg -> InternalState item -> Int -> item -> Element msg
-itemView config state i item =
+itemView : InternalConfig item msg model -> List item -> InternalState -> Int -> item -> Element msg
+itemView config selectedItems state i item =
     let
         itemAttrs =
             [ onClick <| config.dropdownMsg (OnSelect item)
@@ -586,7 +642,7 @@ itemView config state i item =
             ]
 
         selected =
-            List.member item state.selectedItems
+            List.member item selectedItems
 
         highlighed =
             i == state.focusedIndex
@@ -597,7 +653,7 @@ itemView config state i item =
 
 
 
--- helpers
+-- view helpers
 
 
 idAttr : String -> Attribute msg
@@ -617,7 +673,7 @@ referenceDataName =
     "data-dropdown-id"
 
 
-referenceAttr : InternalState item -> Attribute msg
+referenceAttr : InternalState -> Attribute msg
 referenceAttr model =
     Html.Attributes.attribute referenceDataName model.id
         |> htmlAttribute
@@ -668,7 +724,7 @@ onKeyDown msg =
         |> htmlAttribute
 
 
-onBlurAttribute : InternalConfig item msg -> InternalState item -> Attribute msg
+onBlurAttribute : InternalConfig item msg model -> InternalState -> Attribute msg
 onBlurAttribute config state =
     let
         -- relatedTarget only works if element has tabindex
@@ -741,6 +797,6 @@ outsideTarget dropdownId dropdownMsg =
         Dropdown.onOutsideClick model.dropdownState DropdownMsg
 
 -}
-onOutsideClick : State item -> (Msg item -> msg) -> Sub msg
+onOutsideClick : State -> (Msg item -> msg) -> Sub msg
 onOutsideClick (State state) dropdownMsg =
     onMouseDown (outsideTarget state.id dropdownMsg)
