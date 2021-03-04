@@ -59,7 +59,7 @@ update msg model =
         DropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update dropdownConfig subMsg model model.dropdownState options
+                    Dropdown.update dropdownConfig subMsg model model.dropdownState
             in
             ( { model | dropdownState = state }, cmd )
 
@@ -81,7 +81,7 @@ view : Model -> Html Msg
 view model =
     column [ padding 20, spacing 20 ]
         [ el [] <| text <| "Selected Option: " ++ (model.selectedOption |> Maybe.withDefault "Nothing")
-        , Dropdown.view dropdownConfig model model.dropdownState options
+        , Dropdown.view dropdownConfig model model.dropdownState
         , el [] <| text "other content"
         ]
         |> layout []
@@ -138,7 +138,7 @@ dropdownConfig =
                 , el [ Font.size 16 ] (text i)
                 ]
     in
-    Dropdown.filterable .selectedOption DropdownMsg OptionPicked itemToPrompt itemToElement identity
+    Dropdown.filterable (always options) .selectedOption DropdownMsg OptionPicked itemToPrompt itemToElement identity
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs

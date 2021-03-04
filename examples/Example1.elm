@@ -54,7 +54,7 @@ update msg model =
         DropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update dropdownConfig subMsg model model.dropdownState options
+                    Dropdown.update dropdownConfig subMsg model model.dropdownState
             in
             ( { model | dropdownState = state }, cmd )
 
@@ -74,7 +74,7 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    Dropdown.view dropdownConfig model model.dropdownState options
+    Dropdown.view dropdownConfig model model.dropdownState
         |> el []
         |> layout []
 
@@ -88,4 +88,4 @@ dropdownConfig =
         itemToElement selected highlighted item =
             text item
     in
-    Dropdown.basic .selectedOption DropdownMsg OptionPicked itemToPrompt itemToElement
+    Dropdown.basic (always options) .selectedOption DropdownMsg OptionPicked itemToPrompt itemToElement

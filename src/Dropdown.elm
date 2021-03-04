@@ -77,6 +77,7 @@ type alias InternalConfig item msg model =
     , filterPlaceholder : Maybe String
     , dropdownMsg : Msg item -> msg
     , onSelectMsg : OnSelectMsg item msg
+    , allOptions : model -> List item
     , selectionFromModel : model -> Selection item
     , containerAttributes : List (Attribute msg)
     , selectAttributes : List (Attribute msg)
@@ -139,6 +140,7 @@ init id =
 
 {-| Create a basic configuration. This takes:
 
+    - The list of items to display in the dropdown (as a function of the model)
     - The function to get the selected item from the model
     - The message to wrap all the internal messages of the dropdown
     - A message to trigger when an item is selected
@@ -149,13 +151,14 @@ init id =
 
 -}
 basic :
-    (model -> Maybe item)
+    (model -> List item)
+    -> (model -> Maybe item)
     -> (Msg item -> msg)
     -> (Maybe item -> msg)
     -> (item -> Element msg)
     -> (Bool -> Bool -> item -> Element msg)
     -> Config item msg model
-basic selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement =
+basic allOptions selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement =
     Config
         { closeButton = text "▲"
         , containerAttributes = []
@@ -167,6 +170,7 @@ basic selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement =
         , itemToText = \_ -> ""
         , listAttributes = []
         , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , allOptions = allOptions
         , selectionFromModel = selectionFromModel >> SingleItem
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
@@ -177,6 +181,7 @@ basic selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement =
 
 {-| Create a multiselect configuration. This takes:
 
+    - The list of items to display in the dropdown (as a function of the model)
     - The function to get the selected items from the model
     - The message to wrap all the internal messages of the dropdown
     - A message to trigger when an item is selected
@@ -188,12 +193,13 @@ basic selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement =
 -}
 multi :
     (model -> List item)
+    -> (model -> List item)
     -> (Msg item -> msg)
     -> (List item -> msg)
     -> (List item -> Element msg)
     -> (Bool -> Bool -> item -> Element msg)
     -> Config item msg model
-multi selectionFromModel dropdownMsg onSelectMsg itemsToPrompt itemToElement =
+multi allOptions selectionFromModel dropdownMsg onSelectMsg itemsToPrompt itemToElement =
     Config
         { closeButton = text "▲"
         , containerAttributes = []
@@ -205,6 +211,7 @@ multi selectionFromModel dropdownMsg onSelectMsg itemsToPrompt itemToElement =
         , itemToText = \_ -> ""
         , listAttributes = []
         , onSelectMsg = OnSelectMultipleItems onSelectMsg
+        , allOptions = allOptions
         , selectionFromModel = selectionFromModel >> MultipleItems
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
@@ -215,6 +222,7 @@ multi selectionFromModel dropdownMsg onSelectMsg itemsToPrompt itemToElement =
 
 {-| Create a filterable configuration. This takes:
 
+    - The list of items to display in the dropdown (as a function of the model)
     - The function to get the selected item from the model
     - The message to wrap all the internal messages of the dropdown
     - A message to trigger when an item is selected
@@ -226,14 +234,15 @@ multi selectionFromModel dropdownMsg onSelectMsg itemsToPrompt itemToElement =
 
 -}
 filterable :
-    (model -> Maybe item)
+    (model -> List item)
+    -> (model -> Maybe item)
     -> (Msg item -> msg)
     -> (Maybe item -> msg)
     -> (item -> Element msg)
     -> (Bool -> Bool -> item -> Element msg)
     -> (item -> String)
     -> Config item msg model
-filterable selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
+filterable allOptions selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
     Config
         { closeButton = text "▲"
         , containerAttributes = []
@@ -245,6 +254,7 @@ filterable selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement
         , itemToText = itemToText
         , listAttributes = []
         , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , allOptions = allOptions
         , selectionFromModel = selectionFromModel >> SingleItem
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
@@ -341,9 +351,12 @@ withListAttributes attrs (Config config) =
             ( { model | dropdownState = updated }, cmd )
 
 -}
-update : Config item msg model -> Msg item -> model -> State -> List item -> ( State, Cmd msg )
-update (Config config) msg model (State state) data =
+update : Config item msg model -> Msg item -> model -> State -> ( State, Cmd msg )
+update (Config config) msg model (State state) =
     let
+        allOptions =
+            config.allOptions model
+
         selectedItems =
             selectedItemsAsList config model
 
@@ -399,11 +412,11 @@ update (Config config) msg model (State state) data =
                                         0
 
                                 ArrowDown ->
-                                    if state.focusedIndex < List.length data - 1 then
+                                    if state.focusedIndex < List.length allOptions - 1 then
                                         state.focusedIndex + 1
 
                                     else
-                                        List.length data - 1
+                                        List.length allOptions - 1
 
                                 _ ->
                                     state.focusedIndex
@@ -420,7 +433,7 @@ update (Config config) msg model (State state) data =
                                     True
 
                         maybeFocusedItem =
-                            data
+                            allOptions
                                 |> List.indexedMap (\i item -> ( i, item ))
                                 |> List.filter (\( i, _ ) -> i == state.focusedIndex)
                                 |> List.head
@@ -506,9 +519,12 @@ closeOnlyIfNotMultiSelect config state =
     Dropdown.view dropdownConfig model model.dropdownState model.items
 
 -}
-view : Config item msg model -> model -> State -> List item -> Element msg
-view (Config config) model (State state) data =
+view : Config item msg model -> model -> State -> Element msg
+view (Config config) model (State state) =
     let
+        allOptions =
+            config.allOptions model
+
         selectedItems =
             selectedItemsAsList config model
 
@@ -523,7 +539,7 @@ view (Config config) model (State state) data =
                 (item |> config.itemToText |> String.toLower)
 
         filteredData =
-            data
+            allOptions
                 |> List.filter filter
 
         trigger =

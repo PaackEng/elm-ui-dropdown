@@ -59,7 +59,7 @@ update msg model =
         DropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update dropdownConfig subMsg model model.dropdownState options
+                    Dropdown.update dropdownConfig subMsg model model.dropdownState
             in
             ( { model | dropdownState = state }, cmd )
 
@@ -70,7 +70,7 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    Dropdown.view dropdownConfig model model.dropdownState options
+    Dropdown.view dropdownConfig model model.dropdownState
         |> el []
         |> layout []
 
@@ -150,7 +150,7 @@ dropdownConfig =
                 , label = Input.labelRight [ paddingEach { edges | left = 7 } ] <| text item
                 }
     in
-    Dropdown.multi .selectedOptions DropdownMsg OptionsPicked itemsToPrompt itemToElement
+    Dropdown.multi (always options) .selectedOptions DropdownMsg OptionsPicked itemsToPrompt itemToElement
         |> Dropdown.withPromptElement btn
         |> Dropdown.withListAttributes listAttrs
         |> Dropdown.withSelectAttributes selectAttrs
