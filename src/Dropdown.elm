@@ -67,7 +67,9 @@ type Selection item
         }
 
 -}
-type State
+type
+    State item
+    -- item type parameter is not currently used, but keeping it so if it does ever become needed it doesn't change the public api
     = State InternalState
 
 
@@ -135,7 +137,7 @@ type Key
     }
 
 -}
-init : String -> State
+init : String -> State item
 init id =
     State
         { id = id
@@ -355,7 +357,7 @@ withListAttributes attrs (Config config) =
             ( { model | dropdownState = updated }, cmd )
 
 -}
-update : Config item msg model -> Msg item -> model -> State -> ( State, Cmd msg )
+update : Config item msg model -> Msg item -> model -> State item -> ( State item, Cmd msg )
 update (Config config) msg model (State state) =
     let
         allOptions =
@@ -523,7 +525,7 @@ closeOnlyIfNotMultiSelect config state =
     Dropdown.view dropdownConfig model model.dropdownState model.items
 
 -}
-view : Config item msg model -> model -> State -> Element msg
+view : Config item msg model -> model -> State item -> Element msg
 view (Config config) model (State state) =
     let
         allOptions =
@@ -817,6 +819,6 @@ outsideTarget dropdownId dropdownMsg =
         Dropdown.onOutsideClick model.dropdownState DropdownMsg
 
 -}
-onOutsideClick : State -> (Msg item -> msg) -> Sub msg
+onOutsideClick : State item -> (Msg item -> msg) -> Sub msg
 onOutsideClick (State state) dropdownMsg =
     onMouseDown (outsideTarget state.id dropdownMsg)

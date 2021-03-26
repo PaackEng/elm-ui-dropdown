@@ -20,8 +20,8 @@ main =
 
 
 type alias Model =
-    { countryDropdownState : Dropdown.State
-    , cityDropdownState : Dropdown.State
+    { countryDropdownState : Dropdown.State Country
+    , cityDropdownState : Dropdown.State City
     , country : Maybe Country
     , city : Maybe City
     }

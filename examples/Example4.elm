@@ -19,9 +19,13 @@ main =
         }
 
 
+type alias Item =
+    String
+
+
 type alias Model =
-    { dropdownState : Dropdown.State
-    , selectedOption : Maybe String
+    { dropdownState : Dropdown.State Item
+    , selectedOption : Maybe Item
     }
 
 
@@ -34,7 +38,7 @@ init _ =
     )
 
 
-options : List String
+options : List Item
 options =
     List.range 1 100
         |> List.map String.fromInt
@@ -46,8 +50,8 @@ options =
 
 
 type Msg
-    = OptionPicked (Maybe String)
-    | DropdownMsg (Dropdown.Msg String)
+    = OptionPicked (Maybe Item)
+    | DropdownMsg (Dropdown.Msg Item)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -87,7 +91,7 @@ view model =
         |> layout []
 
 
-dropdownConfig : Dropdown.Config String Msg Model
+dropdownConfig : Dropdown.Config Item Msg Model
 dropdownConfig =
     let
         containerAttrs =
