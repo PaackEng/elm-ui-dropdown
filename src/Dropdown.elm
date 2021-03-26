@@ -140,25 +140,33 @@ init id =
 
 {-| Create a basic configuration. This takes:
 
-    - The list of items to display in the dropdown (as a function of the model)
-    - The function to get the selected item from the model
-    - The message to wrap all the internal messages of the dropdown
-    - A message to trigger when an item is selected
-    - A function to get the Element to display from an item, to be used in the select part of the dropdown
-    - A function to get the Element to display from an item, to be used in the item list of the dropdown
+    - allItems - The list of items to display in the dropdown (as a function of the model)
+    - selectedItem - The function to get the selected item from the model
+    - dropdownMsg - The message to wrap all the internal messages of the dropdown
+    - onSelectMsg - A message to trigger when an item is selected
+    - itemToPrompt - A function to get the Element to display from an item, to be used in the select part of the dropdown
+    - itemToElement - A function to get the Element to display from an item, to be used in the item list of the dropdown
 
-    Dropdown.basic DropdownMsg OptionPicked Element.text Element.text
+    Dropdown.basic
+        { allItems = always [ "apples", "bananas", "oranges" ]
+        , selectedItem = .selectedFruit
+        , dropdownMsg = DropdownMsg
+        , onSelectMsg = FruitPicked
+        , itemToPrompt = Element.text
+        , itemToElement = Element.text
+        }
 
 -}
 basic :
-    (model -> List item)
-    -> (model -> Maybe item)
-    -> (Msg item -> msg)
-    -> (Maybe item -> msg)
-    -> (item -> Element msg)
-    -> (Bool -> Bool -> item -> Element msg)
+    { allItems : model -> List item
+    , selectedItem : model -> Maybe item
+    , dropdownMsg : Msg item -> msg
+    , onSelectMsg : Maybe item -> msg
+    , itemToPrompt : item -> Element msg
+    , itemToElement : Bool -> Bool -> item -> Element msg
+    }
     -> Config item msg model
-basic allOptions selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement =
+basic { allItems, selectedItem, dropdownMsg, onSelectMsg, itemToPrompt, itemToElement } =
     Config
         { closeButton = text "▲"
         , containerAttributes = []
@@ -170,8 +178,8 @@ basic allOptions selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToE
         , itemToText = \_ -> ""
         , listAttributes = []
         , onSelectMsg = OnSelectSingleItem onSelectMsg
-        , allOptions = allOptions
-        , selectionFromModel = selectionFromModel >> SingleItem
+        , allOptions = allItems
+        , selectionFromModel = selectedItem >> SingleItem
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
@@ -181,25 +189,24 @@ basic allOptions selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToE
 
 {-| Create a multiselect configuration. This takes:
 
-    - The list of items to display in the dropdown (as a function of the model)
-    - The function to get the selected items from the model
-    - The message to wrap all the internal messages of the dropdown
-    - A message to trigger when an item is selected
-    - A function to get the Element to display from the list of selected items, to be used in the select part of the dropdown
-    - A function to get the Element to display from an item, to be used in the item list of the dropdown
-
-    Dropdown.multiselect DropdownMsg OptionsPicked Element.text Element.text
+    - allItems - The list of items to display in the dropdown (as a function of the model)
+    - selectedItems - The function to get the selected items from the model
+    - dropdownMsg - The message to wrap all the internal messages of the dropdown
+    - onSelectMsg - A message to trigger when an item is selected
+    - itemsToPrompt - A function to get the Element to display from the list of selected items, to be used in the select part of the dropdown
+    - itemToElement - A function to get the Element to display from an item, to be used in the item list of the dropdown
 
 -}
 multi :
-    (model -> List item)
-    -> (model -> List item)
-    -> (Msg item -> msg)
-    -> (List item -> msg)
-    -> (List item -> Element msg)
-    -> (Bool -> Bool -> item -> Element msg)
+    { allItems : model -> List item
+    , selectedItems : model -> List item
+    , dropdownMsg : Msg item -> msg
+    , onSelectMsg : List item -> msg
+    , itemsToPrompt : List item -> Element msg
+    , itemToElement : Bool -> Bool -> item -> Element msg
+    }
     -> Config item msg model
-multi allOptions selectionFromModel dropdownMsg onSelectMsg itemsToPrompt itemToElement =
+multi { allItems, selectedItems, dropdownMsg, onSelectMsg, itemsToPrompt, itemToElement } =
     Config
         { closeButton = text "▲"
         , containerAttributes = []
@@ -211,8 +218,8 @@ multi allOptions selectionFromModel dropdownMsg onSelectMsg itemsToPrompt itemTo
         , itemToText = \_ -> ""
         , listAttributes = []
         , onSelectMsg = OnSelectMultipleItems onSelectMsg
-        , allOptions = allOptions
-        , selectionFromModel = selectionFromModel >> MultipleItems
+        , allOptions = allItems
+        , selectionFromModel = selectedItems >> MultipleItems
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
@@ -222,27 +229,26 @@ multi allOptions selectionFromModel dropdownMsg onSelectMsg itemsToPrompt itemTo
 
 {-| Create a filterable configuration. This takes:
 
-    - The list of items to display in the dropdown (as a function of the model)
-    - The function to get the selected item from the model
-    - The message to wrap all the internal messages of the dropdown
-    - A message to trigger when an item is selected
-    - A function to get the Element to display from an item, to be used in the select part of the dropdown
-    - A function to get the Element to display from an item, to be used in the item list of the dropdown
-    - A function to get the text representation from an item, to be used when filtering elements in the list
-
-    Dropdown.basic DropdownMsg OptionPicked Element.text Element.text
+    - allItems - The list of items to display in the dropdown (as a function of the model)
+    - selectedItem - The function to get the selected item from the model
+    - dropdownMsg - The message to wrap all the internal messages of the dropdown
+    - onSelectMsg - A message to trigger when an item is selected
+    - itemToPrompt - A function to get the Element to display from an item, to be used in the select part of the dropdown
+    - itemToElement - A function to get the Element to display from an item, to be used in the item list of the dropdown
+    - itemToText - A function to get the text representation from an item, to be used when filtering elements in the list
 
 -}
 filterable :
-    (model -> List item)
-    -> (model -> Maybe item)
-    -> (Msg item -> msg)
-    -> (Maybe item -> msg)
-    -> (item -> Element msg)
-    -> (Bool -> Bool -> item -> Element msg)
-    -> (item -> String)
+    { allItems : model -> List item
+    , selectedItem : model -> Maybe item
+    , dropdownMsg : Msg item -> msg
+    , onSelectMsg : Maybe item -> msg
+    , itemToPrompt : item -> Element msg
+    , itemToElement : Bool -> Bool -> item -> Element msg
+    , itemToText : item -> String
+    }
     -> Config item msg model
-filterable allOptions selectionFromModel dropdownMsg onSelectMsg itemToPrompt itemToElement itemToText =
+filterable { allItems, selectedItem, dropdownMsg, onSelectMsg, itemToPrompt, itemToElement, itemToText } =
     Config
         { closeButton = text "▲"
         , containerAttributes = []
@@ -254,8 +260,8 @@ filterable allOptions selectionFromModel dropdownMsg onSelectMsg itemToPrompt it
         , itemToText = itemToText
         , listAttributes = []
         , onSelectMsg = OnSelectSingleItem onSelectMsg
-        , allOptions = allOptions
-        , selectionFromModel = selectionFromModel >> SingleItem
+        , allOptions = allItems
+        , selectionFromModel = selectedItem >> SingleItem
         , openButton = text "▼"
         , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []

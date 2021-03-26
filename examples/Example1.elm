@@ -88,4 +88,11 @@ dropdownConfig =
         itemToElement selected highlighted item =
             text item
     in
-    Dropdown.basic (always options) .selectedOption DropdownMsg OptionPicked itemToPrompt itemToElement
+    Dropdown.basic
+        { allItems = always options
+        , selectedItem = .selectedOption
+        , dropdownMsg = DropdownMsg
+        , onSelectMsg = OptionPicked
+        , itemToPrompt = itemToPrompt
+        , itemToElement = itemToElement
+        }

@@ -193,7 +193,15 @@ dropdownConfig allOptions selectedFromModel dropdownMsg itemPickedMsg =
                 ]
                 (text i)
     in
-    Dropdown.filterable allOptions selectedFromModel dropdownMsg itemPickedMsg itemToPrompt itemToElement identity
+    Dropdown.filterable
+        { allItems = allOptions
+        , selectedItem = selectedFromModel
+        , dropdownMsg = dropdownMsg
+        , onSelectMsg = itemPickedMsg
+        , itemToPrompt = itemToPrompt
+        , itemToElement = itemToElement
+        , itemToText = identity
+        }
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs
