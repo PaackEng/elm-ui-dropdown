@@ -73,28 +73,35 @@ type State
 
 type alias InternalConfig item msg model =
     { dropdownType : DropdownType
-    , promptElement : Element msg
-    , filterPlaceholder : Maybe String
-    , dropdownMsg : Msg item -> msg
-    , onSelectMsg : OnSelectMsg item msg
     , allOptions : model -> List item
     , selectionFromModel : model -> Selection item
+    , dropdownMsg : Msg item -> msg
+    , onSelectMsg : OnSelectMsg item msg
+    , selectionToPrompt : SelectionToPrompt item msg
+    , promptElement : Element msg
+    , itemToElement : Bool -> Bool -> item -> Element msg
+    , itemToText : item -> String
+    , filterPlaceholder : Maybe String
+    , openButton : Element msg
+    , closeButton : Element msg
     , containerAttributes : List (Attribute msg)
     , selectAttributes : List (Attribute msg)
     , listAttributes : List (Attribute msg)
     , searchAttributes : List (Attribute msg)
-    , selectionToPrompt : SelectionToPrompt item msg
-    , itemToElement : Bool -> Bool -> item -> Element msg
-    , openButton : Element msg
-    , closeButton : Element msg
-    , itemToText : item -> String
     }
 
 
 {-| Opaque type that holds the current config
 
     dropdownConfig =
-        Dropdown.basic .selectedOption DropdownMsg OptionPicked Element.text Element.text
+        Dropdown.basic
+            { allItems = always [ "apples", "bananas", "oranges" ]
+            , selectedItem = .selectedFruit
+            , dropdownMsg = DropdownMsg
+            , onSelectMsg = FruitPicked
+            , itemToPrompt = Element.text
+            , itemToElement = \selected -> \highlighted -> Element.text
+            }
 
 -}
 type Config item msg model
@@ -145,16 +152,7 @@ init id =
     - dropdownMsg - The message to wrap all the internal messages of the dropdown
     - onSelectMsg - A message to trigger when an item is selected
     - itemToPrompt - A function to get the Element to display from an item, to be used in the select part of the dropdown
-    - itemToElement - A function to get the Element to display from an item, to be used in the item list of the dropdown
-
-    Dropdown.basic
-        { allItems = always [ "apples", "bananas", "oranges" ]
-        , selectedItem = .selectedFruit
-        , dropdownMsg = DropdownMsg
-        , onSelectMsg = FruitPicked
-        , itemToPrompt = Element.text
-        , itemToElement = Element.text
-        }
+    - itemToElement - A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
 
 -}
 basic :
@@ -168,20 +166,20 @@ basic :
     -> Config item msg model
 basic { allItems, selectedItem, dropdownMsg, onSelectMsg, itemToPrompt, itemToElement } =
     Config
-        { closeButton = text "▲"
-        , containerAttributes = []
-        , dropdownMsg = dropdownMsg
-        , dropdownType = Basic
-        , filterPlaceholder = Nothing
-        , itemToElement = itemToElement
-        , selectionToPrompt = SingleItemToPrompt itemToPrompt
-        , itemToText = \_ -> ""
-        , listAttributes = []
-        , onSelectMsg = OnSelectSingleItem onSelectMsg
+        { dropdownType = Basic
         , allOptions = allItems
         , selectionFromModel = selectedItem >> SingleItem
-        , openButton = text "▼"
+        , dropdownMsg = dropdownMsg
+        , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , selectionToPrompt = SingleItemToPrompt itemToPrompt
         , promptElement = el [ width fill ] (text "-- Select --")
+        , itemToElement = itemToElement
+        , itemToText = \_ -> ""
+        , filterPlaceholder = Nothing
+        , openButton = text "▼"
+        , closeButton = text "▲"
+        , containerAttributes = []
+        , listAttributes = []
         , searchAttributes = []
         , selectAttributes = []
         }
@@ -194,7 +192,7 @@ basic { allItems, selectedItem, dropdownMsg, onSelectMsg, itemToPrompt, itemToEl
     - dropdownMsg - The message to wrap all the internal messages of the dropdown
     - onSelectMsg - A message to trigger when an item is selected
     - itemsToPrompt - A function to get the Element to display from the list of selected items, to be used in the select part of the dropdown
-    - itemToElement - A function to get the Element to display from an item, to be used in the item list of the dropdown
+    - itemToElement - A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
 
 -}
 multi :
@@ -208,20 +206,20 @@ multi :
     -> Config item msg model
 multi { allItems, selectedItems, dropdownMsg, onSelectMsg, itemsToPrompt, itemToElement } =
     Config
-        { closeButton = text "▲"
-        , containerAttributes = []
-        , dropdownMsg = dropdownMsg
-        , dropdownType = MultiSelect
-        , filterPlaceholder = Nothing
-        , itemToElement = itemToElement
-        , selectionToPrompt = MultipleItemsToPrompt itemsToPrompt
-        , itemToText = \_ -> ""
-        , listAttributes = []
-        , onSelectMsg = OnSelectMultipleItems onSelectMsg
+        { dropdownType = MultiSelect
         , allOptions = allItems
         , selectionFromModel = selectedItems >> MultipleItems
-        , openButton = text "▼"
+        , dropdownMsg = dropdownMsg
+        , onSelectMsg = OnSelectMultipleItems onSelectMsg
+        , selectionToPrompt = MultipleItemsToPrompt itemsToPrompt
         , promptElement = el [ width fill ] (text "-- Select --")
+        , itemToElement = itemToElement
+        , itemToText = \_ -> ""
+        , filterPlaceholder = Nothing
+        , openButton = text "▼"
+        , closeButton = text "▲"
+        , containerAttributes = []
+        , listAttributes = []
         , searchAttributes = []
         , selectAttributes = []
         }
@@ -234,7 +232,7 @@ multi { allItems, selectedItems, dropdownMsg, onSelectMsg, itemsToPrompt, itemTo
     - dropdownMsg - The message to wrap all the internal messages of the dropdown
     - onSelectMsg - A message to trigger when an item is selected
     - itemToPrompt - A function to get the Element to display from an item, to be used in the select part of the dropdown
-    - itemToElement - A function to get the Element to display from an item, to be used in the item list of the dropdown
+    - itemToElement - A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
     - itemToText - A function to get the text representation from an item, to be used when filtering elements in the list
 
 -}
@@ -250,20 +248,20 @@ filterable :
     -> Config item msg model
 filterable { allItems, selectedItem, dropdownMsg, onSelectMsg, itemToPrompt, itemToElement, itemToText } =
     Config
-        { closeButton = text "▲"
-        , containerAttributes = []
-        , dropdownMsg = dropdownMsg
-        , dropdownType = Filterable
-        , filterPlaceholder = Just "Filter values"
-        , itemToElement = itemToElement
-        , selectionToPrompt = SingleItemToPrompt itemToPrompt
-        , itemToText = itemToText
-        , listAttributes = []
-        , onSelectMsg = OnSelectSingleItem onSelectMsg
+        { dropdownType = Filterable
         , allOptions = allItems
         , selectionFromModel = selectedItem >> SingleItem
-        , openButton = text "▼"
+        , dropdownMsg = dropdownMsg
+        , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , selectionToPrompt = SingleItemToPrompt itemToPrompt
         , promptElement = el [ width fill ] (text "-- Select --")
+        , itemToElement = itemToElement
+        , itemToText = itemToText
+        , filterPlaceholder = Just "Filter values"
+        , openButton = text "▼"
+        , closeButton = text "▲"
+        , containerAttributes = []
+        , listAttributes = []
         , searchAttributes = []
         , selectAttributes = []
         }
