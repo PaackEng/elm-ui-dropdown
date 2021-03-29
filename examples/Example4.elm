@@ -19,9 +19,13 @@ main =
         }
 
 
+type alias Item =
+    String
+
+
 type alias Model =
-    { dropdownState : Dropdown.State
-    , selectedOption : Maybe String
+    { dropdownState : Dropdown.State Item
+    , selectedOption : Maybe Item
     }
 
 
@@ -34,7 +38,7 @@ init _ =
     )
 
 
-options : List String
+options : List Item
 options =
     List.range 1 100
         |> List.map String.fromInt
@@ -46,8 +50,8 @@ options =
 
 
 type Msg
-    = OptionPicked (Maybe String)
-    | DropdownMsg (Dropdown.Msg String)
+    = OptionPicked (Maybe Item)
+    | DropdownMsg (Dropdown.Msg Item)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -59,7 +63,7 @@ update msg model =
         DropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update dropdownConfig subMsg model model.dropdownState options
+                    Dropdown.update dropdownConfig subMsg model model.dropdownState
             in
             ( { model | dropdownState = state }, cmd )
 
@@ -81,13 +85,13 @@ view : Model -> Html Msg
 view model =
     column [ padding 20, spacing 20 ]
         [ el [] <| text <| "Selected Option: " ++ (model.selectedOption |> Maybe.withDefault "Nothing")
-        , Dropdown.view dropdownConfig model model.dropdownState options
+        , Dropdown.view dropdownConfig model model.dropdownState
         , el [] <| text "other content"
         ]
         |> layout []
 
 
-dropdownConfig : Dropdown.Config String Msg Model
+dropdownConfig : Dropdown.Config Item Msg Model
 dropdownConfig =
     let
         containerAttrs =
@@ -138,7 +142,15 @@ dropdownConfig =
                 , el [ Font.size 16 ] (text i)
                 ]
     in
-    Dropdown.filterable .selectedOption DropdownMsg OptionPicked itemToPrompt itemToElement identity
+    Dropdown.filterable
+        { allItems = always options
+        , selectedItem = .selectedOption
+        , dropdownMsg = DropdownMsg
+        , onSelectMsg = OptionPicked
+        , itemToPrompt = itemToPrompt
+        , itemToElement = itemToElement
+        , itemToText = identity
+        }
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs

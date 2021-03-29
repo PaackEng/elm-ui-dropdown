@@ -16,9 +16,13 @@ main =
         }
 
 
+type alias Item =
+    String
+
+
 type alias Model =
-    { dropdownState : Dropdown.State
-    , selectedOption : Maybe String
+    { dropdownState : Dropdown.State Item
+    , selectedOption : Maybe Item
     }
 
 
@@ -31,7 +35,7 @@ init _ =
     )
 
 
-options : List String
+options : List Item
 options =
     [ "Option 1", "Option 2", "Option 3" ]
 
@@ -41,8 +45,8 @@ options =
 
 
 type Msg
-    = OptionPicked (Maybe String)
-    | DropdownMsg (Dropdown.Msg String)
+    = OptionPicked (Maybe Item)
+    | DropdownMsg (Dropdown.Msg Item)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -54,7 +58,7 @@ update msg model =
         DropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update dropdownConfig subMsg model model.dropdownState options
+                    Dropdown.update dropdownConfig subMsg model model.dropdownState
             in
             ( { model | dropdownState = state }, cmd )
 
@@ -74,12 +78,12 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    Dropdown.view dropdownConfig model model.dropdownState options
+    Dropdown.view dropdownConfig model model.dropdownState
         |> el []
         |> layout []
 
 
-dropdownConfig : Dropdown.Config String Msg Model
+dropdownConfig : Dropdown.Config Item Msg Model
 dropdownConfig =
     let
         itemToPrompt item =
@@ -88,4 +92,11 @@ dropdownConfig =
         itemToElement selected highlighted item =
             text item
     in
-    Dropdown.basic .selectedOption DropdownMsg OptionPicked itemToPrompt itemToElement
+    Dropdown.basic
+        { allItems = always options
+        , selectedItem = .selectedOption
+        , dropdownMsg = DropdownMsg
+        , onSelectMsg = OptionPicked
+        , itemToPrompt = itemToPrompt
+        , itemToElement = itemToElement
+        }

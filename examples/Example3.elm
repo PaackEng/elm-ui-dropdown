@@ -20,8 +20,8 @@ main =
 
 
 type alias Model =
-    { countryDropdownState : Dropdown.State
-    , cityDropdownState : Dropdown.State
+    { countryDropdownState : Dropdown.State Country
+    , cityDropdownState : Dropdown.State City
     , country : Maybe Country
     , city : Maybe City
     }
@@ -100,19 +100,14 @@ update msg model =
         CountryDropdownMsg subMsg ->
             let
                 ( state, cmd ) =
-                    Dropdown.update countryConfig subMsg model model.countryDropdownState countries
+                    Dropdown.update countryConfig subMsg model model.countryDropdownState
             in
             ( { model | countryDropdownState = state }, cmd )
 
         CityDropdownMsg subMsg ->
             let
-                cities =
-                    model.country
-                        |> Maybe.andThen (\c -> Dict.get c allCities)
-                        |> Maybe.withDefault []
-
                 ( state, cmd ) =
-                    Dropdown.update cityConfig subMsg model model.cityDropdownState cities
+                    Dropdown.update cityConfig subMsg model model.cityDropdownState
             in
             ( { model | cityDropdownState = state }, cmd )
 
@@ -132,15 +127,9 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    let
-        cities =
-            model.country
-                |> Maybe.andThen (\c -> Dict.get c allCities)
-                |> Maybe.withDefault []
-    in
     row []
-        [ Dropdown.view countryConfig model model.countryDropdownState countries
-        , Dropdown.view cityConfig model model.cityDropdownState cities
+        [ Dropdown.view countryConfig model model.countryDropdownState
+        , Dropdown.view cityConfig model model.cityDropdownState
         ]
         |> el [ width fill, height fill, padding 20 ]
         |> layout []
@@ -148,16 +137,22 @@ view model =
 
 countryConfig : Dropdown.Config String Msg Model
 countryConfig =
-    dropdownConfig .country CountryDropdownMsg CountryPicked
+    dropdownConfig (always countries) .country CountryDropdownMsg CountryPicked
 
 
 cityConfig : Dropdown.Config String Msg Model
 cityConfig =
-    dropdownConfig .city CityDropdownMsg CityPicked
+    let
+        cities model =
+            model.country
+                |> Maybe.andThen (\c -> Dict.get c allCities)
+                |> Maybe.withDefault []
+    in
+    dropdownConfig cities .city CityDropdownMsg CityPicked
 
 
-dropdownConfig : (Model -> Maybe String) -> (Dropdown.Msg String -> Msg) -> (Maybe String -> Msg) -> Dropdown.Config String Msg Model
-dropdownConfig selectedFromModel dropdownMsg itemPickedMsg =
+dropdownConfig : (Model -> List String) -> (Model -> Maybe String) -> (Dropdown.Msg String -> Msg) -> (Maybe String -> Msg) -> Dropdown.Config String Msg Model
+dropdownConfig allOptions selectedFromModel dropdownMsg itemPickedMsg =
     let
         containerAttrs =
             [ width (px 300) ]
@@ -198,7 +193,15 @@ dropdownConfig selectedFromModel dropdownMsg itemPickedMsg =
                 ]
                 (text i)
     in
-    Dropdown.filterable selectedFromModel dropdownMsg itemPickedMsg itemToPrompt itemToElement identity
+    Dropdown.filterable
+        { allItems = allOptions
+        , selectedItem = selectedFromModel
+        , dropdownMsg = dropdownMsg
+        , onSelectMsg = itemPickedMsg
+        , itemToPrompt = itemToPrompt
+        , itemToElement = itemToElement
+        , itemToText = identity
+        }
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs
