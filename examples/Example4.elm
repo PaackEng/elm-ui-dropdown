@@ -143,8 +143,8 @@ dropdownConfig =
                 ]
     in
     Dropdown.filterable
-        { allItems = always options
-        , selectedItem = .selectedOption
+        { itemsFromModel = always options
+        , selectionFromModel = .selectedOption
         , dropdownMsg = DropdownMsg
         , onSelectMsg = OptionPicked
         , itemToPrompt = itemToPrompt

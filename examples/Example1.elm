@@ -93,8 +93,8 @@ dropdownConfig =
             text item
     in
     Dropdown.basic
-        { allItems = always options
-        , selectedItem = .selectedOption
+        { itemsFromModel = always options
+        , selectionFromModel = .selectedOption
         , dropdownMsg = DropdownMsg
         , onSelectMsg = OptionPicked
         , itemToPrompt = itemToPrompt

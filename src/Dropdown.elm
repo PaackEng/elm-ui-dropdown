@@ -75,7 +75,7 @@ type
 
 type alias InternalConfig item msg model =
     { dropdownType : DropdownType
-    , allOptions : model -> List item
+    , itemsFromModel : model -> List item
     , selectionFromModel : model -> Selection item
     , dropdownMsg : Msg item -> msg
     , onSelectMsg : OnSelectMsg item msg
@@ -149,8 +149,8 @@ init id =
 
 {-| Create a basic configuration. This takes:
 
-    - allItems - The list of items to display in the dropdown (as a function of the model)
-    - selectedItem - The function to get the selected item from the model
+    - itemsFromModel - The list of items to display in the dropdown (as a function of the model)
+    - selectionFromModel - The function to get the selected item from the model
     - dropdownMsg - The message to wrap all the internal messages of the dropdown
     - onSelectMsg - A message to trigger when an item is selected
     - itemToPrompt - A function to get the Element to display from an item, to be used in the select part of the dropdown
@@ -158,19 +158,19 @@ init id =
 
 -}
 basic :
-    { allItems : model -> List item
-    , selectedItem : model -> Maybe item
+    { itemsFromModel : model -> List item
+    , selectionFromModel : model -> Maybe item
     , dropdownMsg : Msg item -> msg
     , onSelectMsg : Maybe item -> msg
     , itemToPrompt : item -> Element msg
     , itemToElement : Bool -> Bool -> item -> Element msg
     }
     -> Config item msg model
-basic { allItems, selectedItem, dropdownMsg, onSelectMsg, itemToPrompt, itemToElement } =
+basic { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemToPrompt, itemToElement } =
     Config
         { dropdownType = Basic
-        , allOptions = allItems
-        , selectionFromModel = selectedItem >> SingleItem
+        , itemsFromModel = itemsFromModel
+        , selectionFromModel = selectionFromModel >> SingleItem
         , dropdownMsg = dropdownMsg
         , onSelectMsg = OnSelectSingleItem onSelectMsg
         , selectionToPrompt = SingleItemToPrompt itemToPrompt
@@ -189,8 +189,8 @@ basic { allItems, selectedItem, dropdownMsg, onSelectMsg, itemToPrompt, itemToEl
 
 {-| Create a multiselect configuration. This takes:
 
-    - allItems - The list of items to display in the dropdown (as a function of the model)
-    - selectedItems - The function to get the selected items from the model
+    - itemsFromModel - The list of items to display in the dropdown (as a function of the model)
+    - selectionFromModel - The function to get the selected items from the model
     - dropdownMsg - The message to wrap all the internal messages of the dropdown
     - onSelectMsg - A message to trigger when an item is selected
     - itemsToPrompt - A function to get the Element to display from the list of selected items, to be used in the select part of the dropdown
@@ -198,19 +198,19 @@ basic { allItems, selectedItem, dropdownMsg, onSelectMsg, itemToPrompt, itemToEl
 
 -}
 multi :
-    { allItems : model -> List item
-    , selectedItems : model -> List item
+    { itemsFromModel : model -> List item
+    , selectionFromModel : model -> List item
     , dropdownMsg : Msg item -> msg
     , onSelectMsg : List item -> msg
     , itemsToPrompt : List item -> Element msg
     , itemToElement : Bool -> Bool -> item -> Element msg
     }
     -> Config item msg model
-multi { allItems, selectedItems, dropdownMsg, onSelectMsg, itemsToPrompt, itemToElement } =
+multi { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemsToPrompt, itemToElement } =
     Config
         { dropdownType = MultiSelect
-        , allOptions = allItems
-        , selectionFromModel = selectedItems >> MultipleItems
+        , itemsFromModel = itemsFromModel
+        , selectionFromModel = selectionFromModel >> MultipleItems
         , dropdownMsg = dropdownMsg
         , onSelectMsg = OnSelectMultipleItems onSelectMsg
         , selectionToPrompt = MultipleItemsToPrompt itemsToPrompt
@@ -229,8 +229,8 @@ multi { allItems, selectedItems, dropdownMsg, onSelectMsg, itemsToPrompt, itemTo
 
 {-| Create a filterable configuration. This takes:
 
-    - allItems - The list of items to display in the dropdown (as a function of the model)
-    - selectedItem - The function to get the selected item from the model
+    - itemsFromModel - The list of items to display in the dropdown (as a function of the model)
+    - selectionFromModel - The function to get the selected item from the model
     - dropdownMsg - The message to wrap all the internal messages of the dropdown
     - onSelectMsg - A message to trigger when an item is selected
     - itemToPrompt - A function to get the Element to display from an item, to be used in the select part of the dropdown
@@ -239,8 +239,8 @@ multi { allItems, selectedItems, dropdownMsg, onSelectMsg, itemsToPrompt, itemTo
 
 -}
 filterable :
-    { allItems : model -> List item
-    , selectedItem : model -> Maybe item
+    { itemsFromModel : model -> List item
+    , selectionFromModel : model -> Maybe item
     , dropdownMsg : Msg item -> msg
     , onSelectMsg : Maybe item -> msg
     , itemToPrompt : item -> Element msg
@@ -248,11 +248,11 @@ filterable :
     , itemToText : item -> String
     }
     -> Config item msg model
-filterable { allItems, selectedItem, dropdownMsg, onSelectMsg, itemToPrompt, itemToElement, itemToText } =
+filterable { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemToPrompt, itemToElement, itemToText } =
     Config
         { dropdownType = Filterable
-        , allOptions = allItems
-        , selectionFromModel = selectedItem >> SingleItem
+        , itemsFromModel = itemsFromModel
+        , selectionFromModel = selectionFromModel >> SingleItem
         , dropdownMsg = dropdownMsg
         , onSelectMsg = OnSelectSingleItem onSelectMsg
         , selectionToPrompt = SingleItemToPrompt itemToPrompt
@@ -360,8 +360,8 @@ withListAttributes attrs (Config config) =
 update : Config item msg model -> Msg item -> model -> State item -> ( State item, Cmd msg )
 update (Config config) msg model (State state) =
     let
-        allOptions =
-            config.allOptions model
+        items =
+            config.itemsFromModel model
 
         selectedItems =
             selectedItemsAsList config model
@@ -418,11 +418,11 @@ update (Config config) msg model (State state) =
                                         0
 
                                 ArrowDown ->
-                                    if state.focusedIndex < List.length allOptions - 1 then
+                                    if state.focusedIndex < List.length items - 1 then
                                         state.focusedIndex + 1
 
                                     else
-                                        List.length allOptions - 1
+                                        List.length items - 1
 
                                 _ ->
                                     state.focusedIndex
@@ -439,7 +439,7 @@ update (Config config) msg model (State state) =
                                     True
 
                         maybeFocusedItem =
-                            allOptions
+                            items
                                 |> List.indexedMap (\i item -> ( i, item ))
                                 |> List.filter (\( i, _ ) -> i == state.focusedIndex)
                                 |> List.head
@@ -528,8 +528,8 @@ closeOnlyIfNotMultiSelect config state =
 view : Config item msg model -> model -> State item -> Element msg
 view (Config config) model (State state) =
     let
-        allOptions =
-            config.allOptions model
+        items =
+            config.itemsFromModel model
 
         selectedItems =
             selectedItemsAsList config model
@@ -545,7 +545,7 @@ view (Config config) model (State state) =
                 (item |> config.itemToText |> String.toLower)
 
         filteredData =
-            allOptions
+            items
                 |> List.filter filter
 
         trigger =
