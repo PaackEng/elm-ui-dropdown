@@ -556,8 +556,7 @@ view (Config config) model (State state) =
     in
     column
         containerAttrs
-        [ el [ width fill, below body ] trigger
-        ]
+        [ el [ width fill ] trigger ]
 
 
 triggerView : InternalConfig item msg model -> List item -> InternalState -> Element msg
