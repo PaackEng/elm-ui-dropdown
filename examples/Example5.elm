@@ -155,8 +155,8 @@ dropdownConfig =
                 }
     in
     Dropdown.multi
-        { allItems = always options
-        , selectedItems = .selectedOptions
+        { itemsFromModel = always options
+        , selectionFromModel = .selectedOptions
         , dropdownMsg = DropdownMsg
         , onSelectMsg = OptionsPicked
         , itemsToPrompt = itemsToPrompt

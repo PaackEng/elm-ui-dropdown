@@ -152,7 +152,7 @@ cityConfig =
 
 
 dropdownConfig : (Model -> List String) -> (Model -> Maybe String) -> (Dropdown.Msg String -> Msg) -> (Maybe String -> Msg) -> Dropdown.Config String Msg Model
-dropdownConfig allOptions selectedFromModel dropdownMsg itemPickedMsg =
+dropdownConfig items selectionFromModel dropdownMsg itemPickedMsg =
     let
         containerAttrs =
             [ width (px 300) ]
@@ -194,8 +194,8 @@ dropdownConfig allOptions selectedFromModel dropdownMsg itemPickedMsg =
                 (text i)
     in
     Dropdown.filterable
-        { allItems = allOptions
-        , selectedItem = selectedFromModel
+        { itemsFromModel = items
+        , selectionFromModel = selectionFromModel
         , dropdownMsg = dropdownMsg
         , onSelectMsg = itemPickedMsg
         , itemToPrompt = itemToPrompt
