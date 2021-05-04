@@ -403,68 +403,27 @@ update (Config config) msg model ((State state) as untouchedState) =
             updateKeyDown config key model state
 
 
+{-| Update for the OnKeyDown message
+-}
 updateKeyDown : InternalConfig item msg model -> Key -> model -> InternalState -> ( State item, Cmd msg )
 updateKeyDown config key model state =
     let
         items =
             config.itemsFromModel model
 
-        newIndex =
-            case key of
-                ArrowUp ->
-                    if state.focusedIndex > 0 then
-                        state.focusedIndex - 1
-
-                    else
-                        0
-
-                ArrowDown ->
-                    if state.focusedIndex < List.length items - 1 then
-                        state.focusedIndex + 1
-
-                    else
-                        List.length items - 1
-
-                _ ->
-                    state.focusedIndex
-
-        isOpen =
-            case key of
-                Esc ->
-                    False
-
-                Enter ->
-                    False
-
-                _ ->
-                    True
-
-        loweredFilter =
-            String.toLower state.filterText
-
-        maybeFocusedItemFold list i =
-            case list of
-                item :: tail ->
-                    if String.contains loweredFilter (item |> config.itemToText |> String.toLower) then
-                        if i == state.focusedIndex then
-                            Just item
-
-                        else
-                            maybeFocusedItemFold tail <| i + 1
-
-                    else
-                        maybeFocusedItemFold tail i
-
-                [] ->
-                    Nothing
-
-        maybeFocusedItem =
-            maybeFocusedItemFold items 0
+        clampIndex i =
+            clamp 0 (List.length items - 1) i
     in
-    ( State { state | focusedIndex = newIndex, isOpen = isOpen }
-    , case key of
+    case key of
+        ArrowDown ->
+            ( State { state | focusedIndex = clampIndex <| state.focusedIndex - 1 }, Cmd.none )
+
+        ArrowUp ->
+            ( State { state | focusedIndex = clampIndex <| state.focusedIndex + 1 }, Cmd.none )
+
         Enter ->
-            case maybeFocusedItem of
+            ( State { state | isOpen = False }
+            , case findFocusedItem config.itemToText state.filterText state.focusedIndex items of
                 Just focusedItem ->
                     selectedItemsAsList config model
                         |> modifySelectedItems config.dropdownType focusedItem
@@ -472,10 +431,10 @@ updateKeyDown config key model state =
 
                 Nothing ->
                     Cmd.none
+            )
 
-        _ ->
-            Cmd.none
-    )
+        Esc ->
+            ( State { state | isOpen = False }, Cmd.none )
 
 
 
@@ -531,6 +490,36 @@ closeOnlyIfNotMultiSelect config state =
 
         _ ->
             False
+
+
+{-| Finds the focused item, if there is one.
+
+Takes into account that the items are potentially filtered
+
+-}
+findFocusedItem : (item -> String) -> String -> Int -> List item -> Maybe item
+findFocusedItem itemToText filterText focusedIndex items =
+    let
+        loweredFilter =
+            String.toLower filterText
+
+        maybeFocusedItemFold list i =
+            case list of
+                item :: tail ->
+                    if String.contains loweredFilter (item |> itemToText |> String.toLower) then
+                        if i == focusedIndex then
+                            Just item
+
+                        else
+                            maybeFocusedItemFold tail <| i + 1
+
+                    else
+                        maybeFocusedItemFold tail i
+
+                [] ->
+                    Nothing
+    in
+    maybeFocusedItemFold items 0
 
 
 {-| Render the view
