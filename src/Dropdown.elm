@@ -440,6 +440,7 @@ update (Config config) msg model (State state) =
 
                         maybeFocusedItem =
                             items
+                                |> List.filter (onFilterText config.itemToText state.filterText)
                                 |> List.indexedMap (\i item -> ( i, item ))
                                 |> List.filter (\( i, _ ) -> i == state.focusedIndex)
                                 |> List.head
@@ -463,6 +464,12 @@ update (Config config) msg model (State state) =
                     ( { state | focusedIndex = newIndex, isOpen = isOpen }, cmd )
     in
     ( State newState, newCommand )
+
+
+onFilterText : (item -> String) -> String -> item -> Bool
+onFilterText itemToText filterText item =
+    String.contains (filterText |> String.toLower)
+        (item |> itemToText |> String.toLower)
 
 
 
@@ -540,13 +547,9 @@ view (Config config) model (State state) =
             ]
                 ++ config.containerAttributes
 
-        filter item =
-            String.contains (state.filterText |> String.toLower)
-                (item |> config.itemToText |> String.toLower)
-
         filteredData =
             items
-                |> List.filter filter
+                |> List.filter (onFilterText config.itemToText state.filterText)
 
         trigger =
             triggerView config selectedItems state
