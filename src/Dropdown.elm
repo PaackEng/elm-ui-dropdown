@@ -358,118 +358,124 @@ withListAttributes attrs (Config config) =
 
 -}
 update : Config item msg model -> Msg item -> model -> State item -> ( State item, Cmd msg )
-update (Config config) msg model (State state) =
+update (Config config) msg model ((State state) as untouchedState) =
+    case msg of
+        NoOp ->
+            ( untouchedState, Cmd.none )
+
+        OnBlur ->
+            ( State { state | isOpen = closeOnlyIfNotMultiSelect config state }, Cmd.none )
+
+        OnClickOutside ->
+            ( State { state | isOpen = False }, Cmd.none )
+
+        OnClickPrompt ->
+            let
+                isOpen =
+                    not state.isOpen
+
+                cmd =
+                    if isOpen then
+                        Task.attempt (\_ -> NoOp) (Dom.focus (state.id ++ "input-search"))
+
+                    else
+                        Cmd.none
+            in
+            ( State { state | isOpen = isOpen, focusedIndex = 0, filterText = "" }, Cmd.map config.dropdownMsg cmd )
+
+        OnSelect item ->
+            let
+                selectedItemsNew =
+                    selectedItemsAsList config model
+                        |> modifySelectedItems config.dropdownType item
+            in
+            ( State
+                { state
+                    | isOpen = closeOnlyIfNotMultiSelect config state
+                }
+            , updateSelectedItemsCommand config.onSelectMsg selectedItemsNew
+            )
+
+        OnFilterTyped val ->
+            ( State { state | filterText = val }, Cmd.none )
+
+        OnKeyDown key ->
+            updateKeyDown config key model state
+
+
+updateKeyDown : InternalConfig item msg model -> Key -> model -> InternalState -> ( State item, Cmd msg )
+updateKeyDown config key model state =
     let
         items =
             config.itemsFromModel model
 
-        selectedItems =
-            selectedItemsAsList config model
+        newIndex =
+            case key of
+                ArrowUp ->
+                    if state.focusedIndex > 0 then
+                        state.focusedIndex - 1
 
-        ( newState, newCommand ) =
-            case msg of
-                NoOp ->
-                    ( state, Cmd.none )
+                    else
+                        0
 
-                OnBlur ->
-                    ( { state | isOpen = closeOnlyIfNotMultiSelect config state }, Cmd.none )
+                ArrowDown ->
+                    if state.focusedIndex < List.length items - 1 then
+                        state.focusedIndex + 1
 
-                OnClickOutside ->
-                    ( { state | isOpen = False }, Cmd.none )
+                    else
+                        List.length items - 1
 
-                OnClickPrompt ->
-                    let
-                        isOpen =
-                            not state.isOpen
+                _ ->
+                    state.focusedIndex
 
-                        cmd =
-                            if isOpen then
-                                Task.attempt (\_ -> NoOp) (Dom.focus (state.id ++ "input-search"))
+        isOpen =
+            case key of
+                Esc ->
+                    False
 
-                            else
-                                Cmd.none
-                    in
-                    ( { state | isOpen = isOpen, focusedIndex = 0, filterText = "" }, Cmd.map config.dropdownMsg cmd )
+                Enter ->
+                    False
 
-                OnSelect item ->
-                    let
-                        selectedItemsNew =
-                            selectedItems
-                                |> modifySelectedItems config.dropdownType item
-                    in
-                    ( { state
-                        | isOpen = closeOnlyIfNotMultiSelect config state
-                      }
-                    , updateSelectedItemsCommand config.onSelectMsg selectedItemsNew
-                    )
+                _ ->
+                    True
 
-                OnFilterTyped val ->
-                    ( { state | filterText = val }, Cmd.none )
+        loweredFilter =
+            String.toLower state.filterText
 
-                OnKeyDown key ->
-                    let
-                        newIndex =
-                            case key of
-                                ArrowUp ->
-                                    if state.focusedIndex > 0 then
-                                        state.focusedIndex - 1
+        maybeFocusedItemFold list i =
+            case list of
+                item :: tail ->
+                    if String.contains loweredFilter (item |> config.itemToText |> String.toLower) then
+                        if i == state.focusedIndex then
+                            Just item
 
-                                    else
-                                        0
+                        else
+                            maybeFocusedItemFold tail <| i + 1
 
-                                ArrowDown ->
-                                    if state.focusedIndex < List.length items - 1 then
-                                        state.focusedIndex + 1
+                    else
+                        maybeFocusedItemFold tail i
 
-                                    else
-                                        List.length items - 1
+                [] ->
+                    Nothing
 
-                                _ ->
-                                    state.focusedIndex
-
-                        isOpen =
-                            case key of
-                                Esc ->
-                                    False
-
-                                Enter ->
-                                    False
-
-                                _ ->
-                                    True
-
-                        maybeFocusedItem =
-                            items
-                                |> List.filter (onFilterText config.itemToText state.filterText)
-                                |> List.indexedMap (\i item -> ( i, item ))
-                                |> List.filter (\( i, _ ) -> i == state.focusedIndex)
-                                |> List.head
-                                |> Maybe.map Tuple.second
-
-                        cmd =
-                            case key of
-                                Enter ->
-                                    case maybeFocusedItem of
-                                        Just focusedItem ->
-                                            selectedItems
-                                                |> modifySelectedItems config.dropdownType focusedItem
-                                                |> updateSelectedItemsCommand config.onSelectMsg
-
-                                        Nothing ->
-                                            Cmd.none
-
-                                _ ->
-                                    Cmd.none
-                    in
-                    ( { state | focusedIndex = newIndex, isOpen = isOpen }, cmd )
+        maybeFocusedItem =
+            maybeFocusedItemFold items 0
     in
-    ( State newState, newCommand )
+    ( State { state | focusedIndex = newIndex, isOpen = isOpen }
+    , case key of
+        Enter ->
+            case maybeFocusedItem of
+                Just focusedItem ->
+                    selectedItemsAsList config model
+                        |> modifySelectedItems config.dropdownType focusedItem
+                        |> updateSelectedItemsCommand config.onSelectMsg
 
+                Nothing ->
+                    Cmd.none
 
-onFilterText : (item -> String) -> String -> item -> Bool
-onFilterText itemToText filterText item =
-    String.contains (filterText |> String.toLower)
-        (item |> itemToText |> String.toLower)
+        _ ->
+            Cmd.none
+    )
 
 
 
@@ -547,9 +553,13 @@ view (Config config) model (State state) =
             ]
                 ++ config.containerAttributes
 
+        filter item =
+            String.contains (String.toLower state.filterText)
+                (item |> config.itemToText |> String.toLower)
+
         filteredData =
             items
-                |> List.filter (onFilterText config.itemToText state.filterText)
+                |> List.filter filter
 
         trigger =
             triggerView config selectedItems state
