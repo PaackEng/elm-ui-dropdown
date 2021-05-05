@@ -416,10 +416,10 @@ updateKeyDown config key model state =
     in
     case key of
         ArrowDown ->
-            ( State { state | focusedIndex = clampIndex <| state.focusedIndex - 1 }, Cmd.none )
+            ( State { state | focusedIndex = clampIndex <| state.focusedIndex + 1 }, Cmd.none )
 
         ArrowUp ->
-            ( State { state | focusedIndex = clampIndex <| state.focusedIndex + 1 }, Cmd.none )
+            ( State { state | focusedIndex = clampIndex <| state.focusedIndex - 1 }, Cmd.none )
 
         Enter ->
             ( State { state | isOpen = False }
