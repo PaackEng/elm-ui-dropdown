@@ -5,6 +5,7 @@ module Dropdown exposing
     , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
     , update, view
     , onOutsideClick
+    , Effect(..), performEffect, updateWithoutPerform, mapEffect
     )
 
 {-| Elm UI Dropdown.
@@ -15,6 +16,7 @@ module Dropdown exposing
 @docs withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
 @docs update, view
 @docs onOutsideClick
+@docs Effect, performEffect, updateWithoutPerform, mapEffect
 
 -}
 
@@ -127,6 +129,13 @@ type Key
     | ArrowUp
     | Enter
     | Esc
+
+
+{-| Allows tests with `elm-program-test`
+-}
+type Effect msg
+    = Loopback msg
+    | DomFocus (Result Dom.Error () -> msg) String
 
 
 {-| Create a new state. You must pass a unique identifier for each dropdown component.
@@ -358,30 +367,39 @@ withListAttributes attrs (Config config) =
 
 -}
 update : Config item msg model -> Msg item -> model -> State item -> ( State item, Cmd msg )
-update (Config config) msg model ((State state) as untouchedState) =
+update config msg model state =
+    Tuple.mapSecond
+        (List.map performEffect >> Cmd.batch)
+        (updateWithoutPerform config msg model state)
+
+
+{-| Same as [`update`](#update) but returning a list of [`Effect`](#Effect).
+-}
+updateWithoutPerform : Config item msg model -> Msg item -> model -> State item -> ( State item, List (Effect msg) )
+updateWithoutPerform (Config config) msg model ((State state) as untouchedState) =
     case msg of
         OnDomFocus _ ->
-            ( untouchedState, Cmd.none )
+            ( untouchedState, [] )
 
         OnBlur ->
-            ( State { state | isOpen = closeOnlyIfNotMultiSelect config state }, Cmd.none )
+            ( State { state | isOpen = closeOnlyIfNotMultiSelect config state }, [] )
 
         OnClickOutside ->
-            ( State { state | isOpen = False }, Cmd.none )
+            ( State { state | isOpen = False }, [] )
 
         OnClickPrompt ->
             let
                 isOpen =
                     not state.isOpen
 
-                cmd =
+                effect =
                     if isOpen then
-                        Task.attempt OnDomFocus (Dom.focus (state.id ++ "input-search"))
+                        [ DomFocus (OnDomFocus >> config.dropdownMsg) (state.id ++ "input-search") ]
 
                     else
-                        Cmd.none
+                        []
             in
-            ( State { state | isOpen = isOpen, focusedIndex = 0, filterText = "" }, Cmd.map config.dropdownMsg cmd )
+            ( State { state | isOpen = isOpen, focusedIndex = 0, filterText = "" }, effect )
 
         OnSelect item ->
             let
@@ -397,15 +415,49 @@ update (Config config) msg model ((State state) as untouchedState) =
             )
 
         OnFilterTyped val ->
-            ( State { state | filterText = val }, Cmd.none )
+            ( State { state | filterText = val }, [] )
 
         OnKeyDown key ->
             updateKeyDown config key model state
 
 
+{-| Resolves [`Effect`](#Effect) as Elm's `Cmd`s. If you plan to implement this yourself, it looks like this:
+
+    performEffect : Effect msg -> Cmd msg
+    performEffect effect =
+        case effect of
+            Loopback msg ->
+                Task.perform identity <| Task.succeed msg
+
+            DomFocus msg id ->
+                Task.attempt msg (Dom.focus id)
+
+-}
+performEffect : Effect msg -> Cmd msg
+performEffect effect =
+    case effect of
+        Loopback msg ->
+            Task.perform identity <| Task.succeed msg
+
+        DomFocus msg id ->
+            Task.attempt msg (Dom.focus id)
+
+
+{-| Same as `Cmd.map`, but for an [`Effect`](#Effect).
+-}
+mapEffect : (a -> b) -> Effect a -> Effect b
+mapEffect applier effect =
+    case effect of
+        Loopback msg ->
+            Loopback <| applier msg
+
+        DomFocus msg id ->
+            DomFocus (\result -> applier <| msg result) id
+
+
 {-| Update for the OnKeyDown message
 -}
-updateKeyDown : InternalConfig item msg model -> Key -> model -> InternalState -> ( State item, Cmd msg )
+updateKeyDown : InternalConfig item msg model -> Key -> model -> InternalState -> ( State item, List (Effect msg) )
 updateKeyDown config key model state =
     let
         items =
@@ -416,14 +468,14 @@ updateKeyDown config key model state =
     in
     case key of
         ArrowDown ->
-            ( State { state | isOpen = True, focusedIndex = clampIndex <| state.focusedIndex + 1 }, Cmd.none )
+            ( State { state | isOpen = True, focusedIndex = clampIndex <| state.focusedIndex + 1 }, [] )
 
         ArrowUp ->
-            ( State { state | isOpen = True, focusedIndex = clampIndex <| state.focusedIndex - 1 }, Cmd.none )
+            ( State { state | isOpen = True, focusedIndex = clampIndex <| state.focusedIndex - 1 }, [] )
 
         Enter ->
             if not state.isOpen then
-                ( State { state | isOpen = True }, Cmd.none )
+                ( State { state | isOpen = True }, [] )
 
             else
                 ( State { state | isOpen = False }
@@ -434,11 +486,11 @@ updateKeyDown config key model state =
                             |> updateSelectedItemsCommand config.onSelectMsg
 
                     Nothing ->
-                        Cmd.none
+                        []
                 )
 
         Esc ->
-            ( State { state | isOpen = False }, Cmd.none )
+            ( State { state | isOpen = False }, [] )
 
 
 
@@ -472,7 +524,7 @@ modifySelectedItems dropdownType selectedItem selectedItemsOld =
             [ selectedItem ]
 
 
-updateSelectedItemsCommand : OnSelectMsg item msg -> List item -> Cmd msg
+updateSelectedItemsCommand : OnSelectMsg item msg -> List item -> List (Effect msg)
 updateSelectedItemsCommand onSelectMsg selectedItemsNew =
     let
         onSelectMsgWithItems =
@@ -483,7 +535,7 @@ updateSelectedItemsCommand onSelectMsg selectedItemsNew =
                 OnSelectMultipleItems itemsToMsg ->
                     itemsToMsg <| selectedItemsNew
     in
-    Task.succeed onSelectMsgWithItems |> Task.perform identity
+    [ Loopback onSelectMsgWithItems ]
 
 
 closeOnlyIfNotMultiSelect : { a | dropdownType : DropdownType } -> { b | isOpen : Bool } -> Bool
