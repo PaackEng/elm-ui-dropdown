@@ -416,22 +416,26 @@ updateKeyDown config key model state =
     in
     case key of
         ArrowDown ->
-            ( State { state | focusedIndex = clampIndex <| state.focusedIndex + 1 }, Cmd.none )
+            ( State { state | isOpen = True, focusedIndex = clampIndex <| state.focusedIndex + 1 }, Cmd.none )
 
         ArrowUp ->
-            ( State { state | focusedIndex = clampIndex <| state.focusedIndex - 1 }, Cmd.none )
+            ( State { state | isOpen = True, focusedIndex = clampIndex <| state.focusedIndex - 1 }, Cmd.none )
 
         Enter ->
-            ( State { state | isOpen = False }
-            , case findFocusedItem config.itemToText state.filterText state.focusedIndex items of
-                Just focusedItem ->
-                    selectedItemsAsList config model
-                        |> modifySelectedItems config.dropdownType focusedItem
-                        |> updateSelectedItemsCommand config.onSelectMsg
+            if not state.isOpen then
+                ( State { state | isOpen = True }, Cmd.none )
 
-                Nothing ->
-                    Cmd.none
-            )
+            else
+                ( State { state | isOpen = False }
+                , case findFocusedItem config.itemToText state.filterText state.focusedIndex items of
+                    Just focusedItem ->
+                        selectedItemsAsList config model
+                            |> modifySelectedItems config.dropdownType focusedItem
+                            |> updateSelectedItemsCommand config.onSelectMsg
+
+                    Nothing ->
+                        Cmd.none
+                )
 
         Esc ->
             ( State { state | isOpen = False }, Cmd.none )
