@@ -593,10 +593,9 @@ view (Config config) model (State state) =
             selectedItemsAsList config model
 
         containerAttrs =
-            [ idAttr state.id
-            , below body
-            ]
-                ++ config.containerAttributes
+            idAttr state.id
+                :: below body
+                :: config.containerAttributes
 
         filter item =
             String.contains (String.toLower state.filterText)
@@ -621,12 +620,11 @@ triggerView : InternalConfig item msg model -> List item -> InternalState -> Ele
 triggerView config selectedItems state =
     let
         selectAttrs =
-            [ onClick (config.dropdownMsg OnClickPrompt)
-            , onKeyDown (config.dropdownMsg << OnKeyDown)
-            , tabIndexAttr 0
-            , referenceAttr state
-            ]
-                ++ (if config.dropdownType == Basic then
+            onClick (config.dropdownMsg OnClickPrompt)
+                :: onKeyDown (config.dropdownMsg << OnKeyDown)
+                :: tabIndexAttr 0
+                :: referenceAttr state
+                :: (if config.dropdownType == Basic then
                         [ onBlurAttribute config state ]
 
                     else
@@ -663,11 +661,10 @@ triggerView config selectedItems state =
 
                 Filterable ->
                     Input.search
-                        ([ idAttr (state.id ++ "input-search")
-                         , focused []
-                         , onBlurAttribute config state
-                         ]
-                            ++ config.searchAttributes
+                        (idAttr (state.id ++ "input-search")
+                            :: focused []
+                            :: onBlurAttribute config state
+                            :: config.searchAttributes
                         )
                         { onChange = config.dropdownMsg << OnFilterTyped
                         , text = state.filterText
