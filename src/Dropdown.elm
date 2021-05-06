@@ -113,7 +113,7 @@ type Config item msg model
 {-| Opaque type for the internal dropdown messages
 -}
 type Msg item
-    = NoOp
+    = OnDomFocus (Result Dom.Error ())
     | OnBlur
     | OnClickPrompt
     | OnSelect item
@@ -360,7 +360,7 @@ withListAttributes attrs (Config config) =
 update : Config item msg model -> Msg item -> model -> State item -> ( State item, Cmd msg )
 update (Config config) msg model ((State state) as untouchedState) =
     case msg of
-        NoOp ->
+        OnDomFocus _ ->
             ( untouchedState, Cmd.none )
 
         OnBlur ->
@@ -376,7 +376,7 @@ update (Config config) msg model ((State state) as untouchedState) =
 
                 cmd =
                     if isOpen then
-                        Task.attempt (\_ -> NoOp) (Dom.focus (state.id ++ "input-search"))
+                        Task.attempt OnDomFocus (Dom.focus (state.id ++ "input-search"))
 
                     else
                         Cmd.none
@@ -613,7 +613,6 @@ triggerView config selectedItems state =
                     Input.search
                         ([ idAttr (state.id ++ "input-search")
                          , focused []
-                         , onClickNoPropagation (config.dropdownMsg NoOp)
                          , onBlurAttribute config state
                          ]
                             ++ config.searchAttributes
@@ -711,18 +710,6 @@ onClick message =
     Events.onClick message
 
 
-onClickNoPropagation : msg -> Attribute msg
-onClickNoPropagation msg =
-    Html.Events.custom "click"
-        (Decode.succeed
-            { message = msg
-            , stopPropagation = True
-            , preventDefault = True
-            }
-        )
-        |> htmlAttribute
-
-
 onKeyDown : (Key -> msg) -> Attribute msg
 onKeyDown msg =
     let
@@ -758,19 +745,21 @@ onBlurAttribute config state =
         dataDecoder =
             Decode.at [ "relatedTarget", "attributes", referenceDataName, "value" ] Decode.string
 
-        attrToMsg attr =
-            if attr == state.id then
-                config.dropdownMsg NoOp
+        attrToMsg maybeAttr =
+            case maybeAttr of
+                Just attr ->
+                    if attr == state.id then
+                        Decode.fail ""
 
-            else
-                config.dropdownMsg OnBlur
+                    else
+                        Decode.succeed <| config.dropdownMsg OnBlur
 
-        blur =
-            Decode.maybe dataDecoder
-                |> Decode.map (Maybe.map attrToMsg)
-                |> Decode.map (Maybe.withDefault <| config.dropdownMsg OnBlur)
+                Nothing ->
+                    Decode.succeed <| config.dropdownMsg OnBlur
     in
-    Html.Events.on "blur" blur
+    Decode.maybe dataDecoder
+        |> Decode.andThen attrToMsg
+        |> Html.Events.on "blur"
         |> htmlAttribute
 
 
