@@ -358,111 +358,87 @@ withListAttributes attrs (Config config) =
 
 -}
 update : Config item msg model -> Msg item -> model -> State item -> ( State item, Cmd msg )
-update (Config config) msg model (State state) =
+update (Config config) msg model ((State state) as untouchedState) =
+    case msg of
+        NoOp ->
+            ( untouchedState, Cmd.none )
+
+        OnBlur ->
+            ( State { state | isOpen = closeOnlyIfNotMultiSelect config state }, Cmd.none )
+
+        OnClickOutside ->
+            ( State { state | isOpen = False }, Cmd.none )
+
+        OnClickPrompt ->
+            let
+                isOpen =
+                    not state.isOpen
+
+                cmd =
+                    if isOpen then
+                        Task.attempt (\_ -> NoOp) (Dom.focus (state.id ++ "input-search"))
+
+                    else
+                        Cmd.none
+            in
+            ( State { state | isOpen = isOpen, focusedIndex = 0, filterText = "" }, Cmd.map config.dropdownMsg cmd )
+
+        OnSelect item ->
+            let
+                selectedItemsNew =
+                    selectedItemsAsList config model
+                        |> modifySelectedItems config.dropdownType item
+            in
+            ( State
+                { state
+                    | isOpen = closeOnlyIfNotMultiSelect config state
+                }
+            , updateSelectedItemsCommand config.onSelectMsg selectedItemsNew
+            )
+
+        OnFilterTyped val ->
+            ( State { state | filterText = val }, Cmd.none )
+
+        OnKeyDown key ->
+            updateKeyDown config key model state
+
+
+{-| Update for the OnKeyDown message
+-}
+updateKeyDown : InternalConfig item msg model -> Key -> model -> InternalState -> ( State item, Cmd msg )
+updateKeyDown config key model state =
     let
         items =
             config.itemsFromModel model
 
-        selectedItems =
-            selectedItemsAsList config model
-
-        ( newState, newCommand ) =
-            case msg of
-                NoOp ->
-                    ( state, Cmd.none )
-
-                OnBlur ->
-                    ( { state | isOpen = closeOnlyIfNotMultiSelect config state }, Cmd.none )
-
-                OnClickOutside ->
-                    ( { state | isOpen = False }, Cmd.none )
-
-                OnClickPrompt ->
-                    let
-                        isOpen =
-                            not state.isOpen
-
-                        cmd =
-                            if isOpen then
-                                Task.attempt (\_ -> NoOp) (Dom.focus (state.id ++ "input-search"))
-
-                            else
-                                Cmd.none
-                    in
-                    ( { state | isOpen = isOpen, focusedIndex = 0, filterText = "" }, Cmd.map config.dropdownMsg cmd )
-
-                OnSelect item ->
-                    let
-                        selectedItemsNew =
-                            selectedItems
-                                |> modifySelectedItems config.dropdownType item
-                    in
-                    ( { state
-                        | isOpen = closeOnlyIfNotMultiSelect config state
-                      }
-                    , updateSelectedItemsCommand config.onSelectMsg selectedItemsNew
-                    )
-
-                OnFilterTyped val ->
-                    ( { state | filterText = val }, Cmd.none )
-
-                OnKeyDown key ->
-                    let
-                        newIndex =
-                            case key of
-                                ArrowUp ->
-                                    if state.focusedIndex > 0 then
-                                        state.focusedIndex - 1
-
-                                    else
-                                        0
-
-                                ArrowDown ->
-                                    if state.focusedIndex < List.length items - 1 then
-                                        state.focusedIndex + 1
-
-                                    else
-                                        List.length items - 1
-
-                                _ ->
-                                    state.focusedIndex
-
-                        isOpen =
-                            case key of
-                                Esc ->
-                                    False
-
-                                Enter ->
-                                    False
-
-                                _ ->
-                                    True
-
-                        maybeFocusedItem =
-                            items
-                                |> List.indexedMap (\i item -> ( i, item ))
-                                |> List.filter (\( i, _ ) -> i == state.focusedIndex)
-                                |> List.head
-                                |> Maybe.map Tuple.second
-
-                        cmd =
-                            case key of
-                                Enter ->
-                                    case maybeFocusedItem of
-                                        Just focusedItem ->
-                                            selectedItems
-                                                |> modifySelectedItems config.dropdownType focusedItem
-                                                |> updateSelectedItemsCommand config.onSelectMsg
-
-                                        Nothing ->
-                                            Cmd.none
-
-                                _ ->
-                                    Cmd.none
-                    in
-                    ( { state | focusedIndex = newIndex, isOpen = isOpen }, cmd )
+        clampIndex i =
+            clamp 0 (List.length items - 1) i
     in
-    ( State newState, newCommand )
+    case key of
+        ArrowDown ->
+            ( State { state | isOpen = True, focusedIndex = clampIndex <| state.focusedIndex + 1 }, Cmd.none )
+
+        ArrowUp ->
+            ( State { state | isOpen = True, focusedIndex = clampIndex <| state.focusedIndex - 1 }, Cmd.none )
+
+        Enter ->
+            if not state.isOpen then
+                ( State { state | isOpen = True }, Cmd.none )
+
+            else
+                ( State { state | isOpen = False }
+                , case findFocusedItem config.itemToText state.filterText state.focusedIndex items of
+                    Just focusedItem ->
+                        selectedItemsAsList config model
+                            |> modifySelectedItems config.dropdownType focusedItem
+                            |> updateSelectedItemsCommand config.onSelectMsg
+
+                    Nothing ->
+                        Cmd.none
+                )
+
+        Esc ->
+            ( State { state | isOpen = False }, Cmd.none )
 
 
 
@@ -520,6 +496,36 @@ closeOnlyIfNotMultiSelect config state =
             False
 
 
+{-| Finds the focused item, if there is one.
+
+Takes into account that the items are potentially filtered
+
+-}
+findFocusedItem : (item -> String) -> String -> Int -> List item -> Maybe item
+findFocusedItem itemToText filterText focusedIndex items =
+    let
+        loweredFilter =
+            String.toLower filterText
+
+        maybeFocusedItemFold list i =
+            case list of
+                item :: tail ->
+                    if String.contains loweredFilter (item |> itemToText |> String.toLower) then
+                        if i == focusedIndex then
+                            Just item
+
+                        else
+                            maybeFocusedItemFold tail <| i + 1
+
+                    else
+                        maybeFocusedItemFold tail i
+
+                [] ->
+                    Nothing
+    in
+    maybeFocusedItemFold items 0
+
+
 {-| Render the view
 
     Dropdown.view dropdownConfig model model.dropdownState model.items
@@ -541,7 +547,7 @@ view (Config config) model (State state) =
                 ++ config.containerAttributes
 
         filter item =
-            String.contains (state.filterText |> String.toLower)
+            String.contains (String.toLower state.filterText)
                 (item |> config.itemToText |> String.toLower)
 
         filteredData =
