@@ -632,6 +632,12 @@ triggerView config selectedItems state =
                     else
                         []
                    )
+                ++ (if state.isOpen then
+                        [ ariaExpanded ]
+
+                    else
+                        []
+                   )
                 ++ config.selectAttributes
 
         prompt =
@@ -765,6 +771,11 @@ ariaRoleListbox =
 ariaSelected : Attribute msg
 ariaSelected =
     Element.htmlAttribute <| Html.Attributes.attribute "aria-selected" "true"
+
+
+ariaExpanded : Attribute msg
+ariaExpanded =
+    Element.htmlAttribute <| Html.Attributes.attribute "aria-expanded" "true"
 
 
 idAttr : String -> Attribute msg
