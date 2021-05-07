@@ -623,6 +623,8 @@ triggerView config selectedItems state =
             onClick (config.dropdownMsg OnClickPrompt)
                 :: onKeyDown (config.dropdownMsg << OnKeyDown)
                 :: tabIndexAttr 0
+                :: ariaHasPopup
+                :: ariaRoleButton
                 :: referenceAttr state
                 :: (if config.dropdownType == Basic then
                         [ onBlurAttribute config state ]
@@ -630,8 +632,6 @@ triggerView config selectedItems state =
                     else
                         []
                    )
-                :: ariaHasPopup
-                :: ariaRoleButton
                 ++ config.selectAttributes
 
         prompt =
