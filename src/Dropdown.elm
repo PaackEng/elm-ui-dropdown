@@ -630,6 +630,8 @@ triggerView config selectedItems state =
                     else
                         []
                    )
+                :: ariaHasPopup
+                :: ariaRoleButton
                 ++ config.selectAttributes
 
         prompt =
@@ -697,6 +699,7 @@ bodyView config selectedItems state data =
                 el
                     [ htmlAttribute <| Html.Attributes.style "flex-shrink" "1"
                     , width fill
+                    , ariaRoleListbox
                     ]
                     items
         in
@@ -709,12 +712,20 @@ bodyView config selectedItems state data =
 itemView : InternalConfig item msg model -> List item -> InternalState -> Int -> item -> Element msg
 itemView config selectedItems state i item =
     let
-        itemAttrs =
+        itemAttrsBase =
             [ onClick <| config.dropdownMsg (OnSelect item)
             , referenceAttr state
             , tabIndexAttr -1
             , width fill
+            , ariaRoleOption
             ]
+
+        itemAttrs =
+            if selected then
+                ariaSelected :: itemAttrsBase
+
+            else
+                itemAttrsBase
 
         selected =
             List.member item selectedItems
@@ -729,6 +740,31 @@ itemView config selectedItems state i item =
 
 
 -- view helpers
+
+
+ariaHasPopup : Attribute msg
+ariaHasPopup =
+    Element.htmlAttribute <| Html.Attributes.attribute "aria-haspopup" "listbox"
+
+
+ariaRoleButton : Attribute msg
+ariaRoleButton =
+    Element.htmlAttribute <| Html.Attributes.attribute "role" "button"
+
+
+ariaRoleOption : Attribute msg
+ariaRoleOption =
+    Element.htmlAttribute <| Html.Attributes.attribute "role" "option"
+
+
+ariaRoleListbox : Attribute msg
+ariaRoleListbox =
+    Element.htmlAttribute <| Html.Attributes.attribute "role" "listbox"
+
+
+ariaSelected : Attribute msg
+ariaSelected =
+    Element.htmlAttribute <| Html.Attributes.attribute "aria-selected" "true"
 
 
 idAttr : String -> Attribute msg
