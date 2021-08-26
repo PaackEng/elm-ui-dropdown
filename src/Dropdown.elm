@@ -269,7 +269,6 @@ filterable { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemT
         , selectionFromModel = selectionFromModel >> SingleItem
         , dropdownMsg = dropdownMsg
         , onSelectMsg = OnSelectSingleItem onSelectMsg
-        , onFilterChangeMsg = Nothing
         , selectionToPrompt = SingleItemToPrompt itemToPrompt
         , promptElement = el [ width fill ] (text "-- Select --")
         , itemToElement = itemToElement
@@ -281,6 +280,7 @@ filterable { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemT
         , listAttributes = []
         , searchAttributes = []
         , selectAttributes = []
+        , onFilterChangeMsg = Nothing
         }
 
 
@@ -290,7 +290,7 @@ filterable { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemT
     - selectionFromModel - The function to get the selected item from the model
     - dropdownMsg - The message to wrap all the internal messages of the dropdown
     - onSelectMsg - A message to trigger when an item is selected
-    - onFilterChangeMsg - A message emitted when text in the search input changes, this message can be used to fetch predictions from a remote server to be rendered in the dropdown 
+    - onFilterChangeMsg - A message emitted when text in the search input changes, this message can be used to fetch predictions from a remote server to be rendered in the dropdown
     - itemToPrompt - A function to get the Element to display from an item, to be used in the select part of the dropdown
     - itemToElement - A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
     - itemToText - A function to get the text representation from an item, to be used when filtering elements in the list
