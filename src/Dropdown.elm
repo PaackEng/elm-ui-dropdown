@@ -1,19 +1,18 @@
 module Dropdown exposing
     ( State, init
     , Msg
-    , Config, basic, filterable, multi
+    , Config, basic, filterable, multi, autocompleteHelper
     , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
     , update, view
     , onOutsideClick
     , Effect(..), performEffect, updateWithoutPerform, mapEffect
-    , autocompleteHelper
     )
 
 {-| Elm UI Dropdown.
 
 @docs State, init
 @docs Msg
-@docs Config, basic, filterable, multi
+@docs Config, basic, filterable, multi, autocompleteHelper
 @docs withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
 @docs update, view
 @docs onOutsideClick
