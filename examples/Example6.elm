@@ -139,7 +139,7 @@ dropdownConfig =
                 , el [ Font.size 16 ] (text i)
                 ]
     in
-    Dropdown.autocomplete
+    Dropdown.autocompleteHelper
         { itemsFromModel = always options
         , selectionFromModel = .selectedOption
         , dropdownMsg = DropdownMsg

@@ -6,7 +6,7 @@ module Dropdown exposing
     , update, view
     , onOutsideClick
     , Effect(..), performEffect, updateWithoutPerform, mapEffect
-    , autocomplete
+    , autocompleteHelper
     )
 
 {-| Elm UI Dropdown.
@@ -36,7 +36,7 @@ type DropdownType
     = Basic
     | Filterable
     | MultiSelect
-    | AutoComplete
+    | AutoCompleteHelper
 
 
 type alias InternalState =
@@ -296,7 +296,7 @@ filterable { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemT
     - itemToText - A function to get the text representation from an item, to be used when filtering elements in the list
 
 -}
-autocomplete :
+autocompleteHelper :
     { itemsFromModel : model -> List item
     , selectionFromModel : model -> Maybe item
     , dropdownMsg : Msg item -> msg
@@ -307,9 +307,9 @@ autocomplete :
     , itemToText : item -> String
     }
     -> Config item msg model
-autocomplete { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, onFilterChangeMsg, itemToPrompt, itemToElement, itemToText } =
+autocompleteHelper { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, onFilterChangeMsg, itemToPrompt, itemToElement, itemToText } =
     Config
-        { dropdownType = AutoComplete
+        { dropdownType = AutoCompleteHelper
         , itemsFromModel = itemsFromModel
         , selectionFromModel = selectionFromModel >> SingleItem
         , dropdownMsg = dropdownMsg
@@ -668,7 +668,7 @@ view (Config config) model (State state) =
 
         data =
             case config.dropdownType of
-                AutoComplete ->
+                AutoCompleteHelper ->
                     items
 
                 Filterable ->
@@ -757,7 +757,7 @@ triggerView config selectedItems state =
                 Filterable ->
                     searchInput
 
-                AutoComplete ->
+                AutoCompleteHelper ->
                     searchInput
 
         ( promptOrSearch, button ) =
