@@ -309,7 +309,7 @@ autocomplete :
     -> Config item msg model
 autocomplete { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, onFilterChangeMsg, itemToPrompt, itemToElement, itemToText } =
     Config
-        { dropdownType = Filterable
+        { dropdownType = AutoComplete
         , itemsFromModel = itemsFromModel
         , selectionFromModel = selectionFromModel >> SingleItem
         , dropdownMsg = dropdownMsg
