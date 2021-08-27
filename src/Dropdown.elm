@@ -300,7 +300,7 @@ autocompleteHelper :
     , selectionFromModel : model -> Maybe item
     , dropdownMsg : Msg item -> msg
     , onSelectMsg : Maybe item -> msg
-    , onFilterChangeMsg : String -> msg
+    , onFilterChangeMsg : Maybe (String -> msg)
     , itemToPrompt : item -> Element msg
     , itemToElement : Bool -> Bool -> item -> Element msg
     , itemToText : item -> String
@@ -313,7 +313,7 @@ autocompleteHelper { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMs
         , selectionFromModel = selectionFromModel >> SingleItem
         , dropdownMsg = dropdownMsg
         , onSelectMsg = OnSelectSingleItem onSelectMsg
-        , onFilterChangeMsg = Just onFilterChangeMsg
+        , onFilterChangeMsg = onFilterChangeMsg
         , selectionToPrompt = SingleItemToPrompt itemToPrompt
         , promptElement = el [ width fill ] (text "-- Select --")
         , itemToElement = itemToElement
