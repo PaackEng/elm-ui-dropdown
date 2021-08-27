@@ -1,7 +1,7 @@
 module Dropdown exposing
     ( State, init
     , Msg
-    , Config, basic, filterable, multi
+    , Config, basic, filterable, multi, autocompleteHelper
     , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
     , update, view
     , onOutsideClick
@@ -12,7 +12,7 @@ module Dropdown exposing
 
 @docs State, init
 @docs Msg
-@docs Config, basic, filterable, multi
+@docs Config, basic, filterable, multi, autocompleteHelper
 @docs withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
 @docs update, view
 @docs onOutsideClick
@@ -35,6 +35,7 @@ type DropdownType
     = Basic
     | Filterable
     | MultiSelect
+    | AutoCompleteHelper
 
 
 type alias InternalState =
@@ -81,6 +82,7 @@ type alias InternalConfig item msg model =
     , selectionFromModel : model -> Selection item
     , dropdownMsg : Msg item -> msg
     , onSelectMsg : OnSelectMsg item msg
+    , onFilterChangeMsg : Maybe (String -> msg)
     , selectionToPrompt : SelectionToPrompt item msg
     , promptElement : Element msg
     , itemToElement : Bool -> Bool -> item -> Element msg
@@ -182,6 +184,7 @@ basic { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemToProm
         , selectionFromModel = selectionFromModel >> SingleItem
         , dropdownMsg = dropdownMsg
         , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , onFilterChangeMsg = Nothing
         , selectionToPrompt = SingleItemToPrompt itemToPrompt
         , promptElement = el [ width fill ] (text "-- Select --")
         , itemToElement = itemToElement
@@ -222,6 +225,7 @@ multi { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemsToPro
         , selectionFromModel = selectionFromModel >> MultipleItems
         , dropdownMsg = dropdownMsg
         , onSelectMsg = OnSelectMultipleItems onSelectMsg
+        , onFilterChangeMsg = Nothing
         , selectionToPrompt = MultipleItemsToPrompt itemsToPrompt
         , promptElement = el [ width fill ] (text "-- Select --")
         , itemToElement = itemToElement
@@ -264,6 +268,52 @@ filterable { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemT
         , selectionFromModel = selectionFromModel >> SingleItem
         , dropdownMsg = dropdownMsg
         , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , selectionToPrompt = SingleItemToPrompt itemToPrompt
+        , promptElement = el [ width fill ] (text "-- Select --")
+        , itemToElement = itemToElement
+        , itemToText = itemToText
+        , filterPlaceholder = Just "Filter values"
+        , openButton = text "▼"
+        , closeButton = text "▲"
+        , containerAttributes = []
+        , listAttributes = []
+        , searchAttributes = []
+        , selectAttributes = []
+        , onFilterChangeMsg = Nothing
+        }
+
+
+{-| Create a configuration which can be used as an autocomplete. It emits a message on every filter change which can be handled in parent application to fetch predictions. This takes:
+
+    - itemsFromModel - The list of items to display in the dropdown (as a function of the model)
+    - selectionFromModel - The function to get the selected item from the model
+    - dropdownMsg - The message to wrap all the internal messages of the dropdown
+    - onSelectMsg - A message to trigger when an item is selected
+    - onFilterChangeMsg - A message emitted when text in the search input changes, this message can be used to fetch predictions from a remote server to be rendered in the dropdown
+    - itemToPrompt - A function to get the Element to display from an item, to be used in the select part of the dropdown
+    - itemToElement - A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
+    - itemToText - A function to get the text representation from an item, to be used when filtering elements in the list
+
+-}
+autocompleteHelper :
+    { itemsFromModel : model -> List item
+    , selectionFromModel : model -> Maybe item
+    , dropdownMsg : Msg item -> msg
+    , onSelectMsg : Maybe item -> msg
+    , onFilterChangeMsg : Maybe (String -> msg)
+    , itemToPrompt : item -> Element msg
+    , itemToElement : Bool -> Bool -> item -> Element msg
+    , itemToText : item -> String
+    }
+    -> Config item msg model
+autocompleteHelper { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, onFilterChangeMsg, itemToPrompt, itemToElement, itemToText } =
+    Config
+        { dropdownType = AutoCompleteHelper
+        , itemsFromModel = itemsFromModel
+        , selectionFromModel = selectionFromModel >> SingleItem
+        , dropdownMsg = dropdownMsg
+        , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , onFilterChangeMsg = onFilterChangeMsg
         , selectionToPrompt = SingleItemToPrompt itemToPrompt
         , promptElement = el [ width fill ] (text "-- Select --")
         , itemToElement = itemToElement
@@ -415,7 +465,14 @@ updateWithoutPerform (Config config) msg model ((State state) as untouchedState)
             )
 
         OnFilterTyped val ->
-            ( State { state | filterText = val }, [] )
+            ( State { state | filterText = val }
+            , case config.onFilterChangeMsg of
+                Nothing ->
+                    []
+
+                Just onFilterChange ->
+                    [ Loopback <| onFilterChange val ]
+            )
 
         OnKeyDown key ->
             updateKeyDown config key model state
@@ -608,8 +665,22 @@ view (Config config) model (State state) =
         trigger =
             triggerView config selectedItems state
 
+        data =
+            case config.dropdownType of
+                AutoCompleteHelper ->
+                    items
+
+                Filterable ->
+                    filteredData
+
+                Basic ->
+                    items
+
+                MultiSelect ->
+                    items
+
         body =
-            bodyView config selectedItems state filteredData
+            bodyView config selectedItems state data
     in
     column
         containerAttrs
@@ -659,6 +730,21 @@ triggerView config selectedItems state =
                             MultipleItemsToPrompt f ->
                                 f xs
 
+        searchInput =
+            Input.search
+                (idAttr (state.id ++ "input-search")
+                    :: focused []
+                    :: onBlurAttribute config state
+                    :: config.searchAttributes
+                )
+                { onChange = config.dropdownMsg << OnFilterTyped
+                , text = state.filterText
+                , placeholder =
+                    config.filterPlaceholder
+                        |> Maybe.map (text >> Input.placeholder [])
+                , label = Input.labelHidden "Filter List"
+                }
+
         search =
             case config.dropdownType of
                 Basic ->
@@ -668,19 +754,10 @@ triggerView config selectedItems state =
                     prompt
 
                 Filterable ->
-                    Input.search
-                        (idAttr (state.id ++ "input-search")
-                            :: focused []
-                            :: onBlurAttribute config state
-                            :: config.searchAttributes
-                        )
-                        { onChange = config.dropdownMsg << OnFilterTyped
-                        , text = state.filterText
-                        , placeholder =
-                            config.filterPlaceholder
-                                |> Maybe.map (text >> Input.placeholder [])
-                        , label = Input.labelHidden "Filter List"
-                        }
+                    searchInput
+
+                AutoCompleteHelper ->
+                    searchInput
 
         ( promptOrSearch, button ) =
             if state.isOpen then
