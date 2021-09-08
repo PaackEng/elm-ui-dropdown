@@ -141,6 +141,16 @@ dropdownConfig =
                 [ el [] (text "-")
                 , el [ Font.size 16 ] (text i)
                 ]
+
+        emptyListElement =
+            Element.el
+                [ Element.width fill
+                , Font.size 12
+                , Element.padding 8
+                , Background.color <| rgb255 255 220 220
+                ]
+            <|
+                Element.text "Nothing matches..."
     in
     Dropdown.filterable
         { itemsFromModel = always options
@@ -151,6 +161,7 @@ dropdownConfig =
         , itemToElement = itemToElement
         , itemToText = identity
         }
+        |> Dropdown.withEmptyListElement emptyListElement
         |> Dropdown.withContainerAttributes containerAttrs
         |> Dropdown.withSelectAttributes selectAttrs
         |> Dropdown.withListAttributes listAttrs

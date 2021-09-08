@@ -1,22 +1,37 @@
 module Dropdown exposing
-    ( State, init
-    , Msg
-    , Config, basic, filterable, multi, autocompleteHelper
-    , withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
-    , update, view
-    , onOutsideClick
-    , Effect(..), performEffect, updateWithoutPerform, mapEffect
+    ( basic, filterable, multi, autocompleteHelper
+    , Config, State, Msg
+    , init, update, view
+    , Effect(..), mapEffect, performEffect, updateWithoutPerform
+    , onOutsideClick, withContainerAttributes, withEmptyListElement
+    , withFilterPlaceholder, withListAttributes, withOpenCloseButtons
+    , withPromptElement, withSearchAttributes, withSelectAttributes
     )
 
 {-| Elm UI Dropdown.
 
-@docs State, init
-@docs Msg
-@docs Config, basic, filterable, multi, autocompleteHelper
-@docs withContainerAttributes, withPromptElement, withFilterPlaceholder, withSelectAttributes, withSearchAttributes, withOpenCloseButtons, withListAttributes
-@docs update, view
-@docs onOutsideClick
-@docs Effect, performEffect, updateWithoutPerform, mapEffect
+
+# Component constructors
+
+@docs basic, filterable, multi, autocompleteHelper
+
+
+# State
+
+@docs Config, State, Msg
+@docs init, update, view
+
+
+## Effects
+
+@docs Effect, mapEffect, performEffect, updateWithoutPerform
+
+
+# Options
+
+@docs onOutsideClick, withContainerAttributes, withEmptyListElement
+@docs withFilterPlaceholder, withListAttributes, withOpenCloseButtons
+@docs withPromptElement, withSearchAttributes, withSelectAttributes
 
 -}
 
@@ -77,23 +92,24 @@ type
 
 
 type alias InternalConfig item msg model =
-    { dropdownType : DropdownType
-    , itemsFromModel : model -> List item
-    , selectionFromModel : model -> Selection item
+    { closeButton : Element msg
+    , containerAttributes : List (Attribute msg)
     , dropdownMsg : Msg item -> msg
-    , onSelectMsg : OnSelectMsg item msg
-    , onFilterChangeMsg : Maybe (String -> msg)
-    , selectionToPrompt : SelectionToPrompt item msg
-    , promptElement : Element msg
+    , dropdownType : DropdownType
+    , emptyListElement : Element msg
+    , filterPlaceholder : Maybe String
+    , itemsFromModel : model -> List item
     , itemToElement : Bool -> Bool -> item -> Element msg
     , itemToText : item -> String
-    , filterPlaceholder : Maybe String
-    , openButton : Element msg
-    , closeButton : Element msg
-    , containerAttributes : List (Attribute msg)
-    , selectAttributes : List (Attribute msg)
     , listAttributes : List (Attribute msg)
+    , onFilterChangeMsg : Maybe (String -> msg)
+    , onSelectMsg : OnSelectMsg item msg
+    , openButton : Element msg
+    , promptElement : Element msg
     , searchAttributes : List (Attribute msg)
+    , selectAttributes : List (Attribute msg)
+    , selectionFromModel : model -> Selection item
+    , selectionToPrompt : SelectionToPrompt item msg
     }
 
 
@@ -160,12 +176,12 @@ init id =
 
 {-| Create a basic configuration. This takes:
 
-    - itemsFromModel - The list of items to display in the dropdown (as a function of the model)
-    - selectionFromModel - The function to get the selected item from the model
-    - dropdownMsg - The message to wrap all the internal messages of the dropdown
-    - onSelectMsg - A message to trigger when an item is selected
-    - itemToPrompt - A function to get the Element to display from an item, to be used in the select part of the dropdown
-    - itemToElement - A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
+  - `itemsFromModel`: The list of items to display in the dropdown (as a function of the model)
+  - `selectionFromModel`: The function to get the selected item from the model
+  - `dropdownMsg`: The message to wrap all the internal messages of the dropdown
+  - `onSelectMsg`: A message to trigger when an item is selected
+  - `itemToPrompt`: A function to get the Element to display from an item, to be used in the select part of the dropdown
+  - `itemToElement`: A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
 
 -}
 basic :
@@ -179,34 +195,35 @@ basic :
     -> Config item msg model
 basic { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemToPrompt, itemToElement } =
     Config
-        { dropdownType = Basic
-        , itemsFromModel = itemsFromModel
-        , selectionFromModel = selectionFromModel >> SingleItem
+        { closeButton = text "▲"
+        , containerAttributes = []
         , dropdownMsg = dropdownMsg
-        , onSelectMsg = OnSelectSingleItem onSelectMsg
-        , onFilterChangeMsg = Nothing
-        , selectionToPrompt = SingleItemToPrompt itemToPrompt
-        , promptElement = el [ width fill ] (text "-- Select --")
+        , dropdownType = Basic
+        , emptyListElement = Element.none
+        , filterPlaceholder = Nothing
+        , itemsFromModel = itemsFromModel
         , itemToElement = itemToElement
         , itemToText = \_ -> ""
-        , filterPlaceholder = Nothing
-        , openButton = text "▼"
-        , closeButton = text "▲"
-        , containerAttributes = []
         , listAttributes = []
+        , onFilterChangeMsg = Nothing
+        , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , openButton = text "▼"
+        , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
         , selectAttributes = []
+        , selectionFromModel = selectionFromModel >> SingleItem
+        , selectionToPrompt = SingleItemToPrompt itemToPrompt
         }
 
 
 {-| Create a multiselect configuration. This takes:
 
-    - itemsFromModel - The list of items to display in the dropdown (as a function of the model)
-    - selectionFromModel - The function to get the selected items from the model
-    - dropdownMsg - The message to wrap all the internal messages of the dropdown
-    - onSelectMsg - A message to trigger when an item is selected
-    - itemsToPrompt - A function to get the Element to display from the list of selected items, to be used in the select part of the dropdown
-    - itemToElement - A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
+  - `itemsFromModel`: The list of items to display in the dropdown (as a function of the model)
+  - `selectionFromModel`: The function to get the selected items from the model
+  - `dropdownMsg`: The message to wrap all the internal messages of the dropdown
+  - `onSelectMsg`: A message to trigger when an item is selected
+  - `itemsToPrompt`: A function to get the Element to display from the list of selected items, to be used in the select part of the dropdown
+  - `itemToElement`: A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
 
 -}
 multi :
@@ -220,35 +237,36 @@ multi :
     -> Config item msg model
 multi { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemsToPrompt, itemToElement } =
     Config
-        { dropdownType = MultiSelect
-        , itemsFromModel = itemsFromModel
-        , selectionFromModel = selectionFromModel >> MultipleItems
+        { closeButton = text "▲"
+        , containerAttributes = []
         , dropdownMsg = dropdownMsg
-        , onSelectMsg = OnSelectMultipleItems onSelectMsg
-        , onFilterChangeMsg = Nothing
-        , selectionToPrompt = MultipleItemsToPrompt itemsToPrompt
-        , promptElement = el [ width fill ] (text "-- Select --")
+        , dropdownType = MultiSelect
+        , emptyListElement = Element.none
+        , filterPlaceholder = Nothing
+        , itemsFromModel = itemsFromModel
         , itemToElement = itemToElement
         , itemToText = \_ -> ""
-        , filterPlaceholder = Nothing
-        , openButton = text "▼"
-        , closeButton = text "▲"
-        , containerAttributes = []
         , listAttributes = []
+        , onFilterChangeMsg = Nothing
+        , onSelectMsg = OnSelectMultipleItems onSelectMsg
+        , openButton = text "▼"
+        , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
         , selectAttributes = []
+        , selectionFromModel = selectionFromModel >> MultipleItems
+        , selectionToPrompt = MultipleItemsToPrompt itemsToPrompt
         }
 
 
 {-| Create a filterable configuration. This takes:
 
-    - itemsFromModel - The list of items to display in the dropdown (as a function of the model)
-    - selectionFromModel - The function to get the selected item from the model
-    - dropdownMsg - The message to wrap all the internal messages of the dropdown
-    - onSelectMsg - A message to trigger when an item is selected
-    - itemToPrompt - A function to get the Element to display from an item, to be used in the select part of the dropdown
-    - itemToElement - A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
-    - itemToText - A function to get the text representation from an item, to be used when filtering elements in the list
+  - `itemsFromModel`: The list of items to display in the dropdown (as a function of the model)
+  - `selectionFromModel`: The function to get the selected item from the model
+  - `dropdownMsg`: The message to wrap all the internal messages of the dropdown
+  - `onSelectMsg`: A message to trigger when an item is selected
+  - `itemToPrompt`: A function to get the Element to display from an item, to be used in the select part of the dropdown
+  - `itemToElement`: A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
+  - `itemToText`: A function to get the text representation from an item, to be used when filtering elements in the list
 
 -}
 filterable :
@@ -263,36 +281,37 @@ filterable :
     -> Config item msg model
 filterable { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, itemToPrompt, itemToElement, itemToText } =
     Config
-        { dropdownType = Filterable
-        , itemsFromModel = itemsFromModel
-        , selectionFromModel = selectionFromModel >> SingleItem
+        { closeButton = text "▲"
+        , containerAttributes = []
         , dropdownMsg = dropdownMsg
-        , onSelectMsg = OnSelectSingleItem onSelectMsg
-        , selectionToPrompt = SingleItemToPrompt itemToPrompt
-        , promptElement = el [ width fill ] (text "-- Select --")
+        , dropdownType = Filterable
+        , emptyListElement = Element.none
+        , filterPlaceholder = Just "Filter values"
+        , itemsFromModel = itemsFromModel
         , itemToElement = itemToElement
         , itemToText = itemToText
-        , filterPlaceholder = Just "Filter values"
-        , openButton = text "▼"
-        , closeButton = text "▲"
-        , containerAttributes = []
         , listAttributes = []
+        , onFilterChangeMsg = Nothing
+        , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , openButton = text "▼"
+        , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
         , selectAttributes = []
-        , onFilterChangeMsg = Nothing
+        , selectionFromModel = selectionFromModel >> SingleItem
+        , selectionToPrompt = SingleItemToPrompt itemToPrompt
         }
 
 
 {-| Create a configuration which can be used as an autocomplete. It emits a message on every filter change which can be handled in parent application to fetch predictions. This takes:
 
-    - itemsFromModel - The list of items to display in the dropdown (as a function of the model)
-    - selectionFromModel - The function to get the selected item from the model
-    - dropdownMsg - The message to wrap all the internal messages of the dropdown
-    - onSelectMsg - A message to trigger when an item is selected
-    - onFilterChangeMsg - A message emitted when text in the search input changes, this message can be used to fetch predictions from a remote server to be rendered in the dropdown
-    - itemToPrompt - A function to get the Element to display from an item, to be used in the select part of the dropdown
-    - itemToElement - A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
-    - itemToText - A function to get the text representation from an item, to be used when filtering elements in the list
+  - `itemsFromModel`: The list of items to display in the dropdown (as a function of the model)
+  - `selectionFromModel`: The function to get the selected item from the model
+  - `dropdownMsg`: The message to wrap all the internal messages of the dropdown
+  - `onSelectMsg`: A message to trigger when an item is selected
+  - `onFilterChangeMsg`: A message emitted when text in the search input changes, this message can be used to fetch predictions from a remote server to be rendered in the dropdown
+  - `itemToPrompt`: A function to get the Element to display from an item, to be used in the select part of the dropdown
+  - `itemToElement`: A function that takes a bool for whether the item is selected followed by a bool for whether the item is highlighted, followed by the item and returns the Element to display, to be used in the list part of the dropdown
+  - `itemToText`: A function to get the text representation from an item, to be used when filtering elements in the list
 
 -}
 autocompleteHelper :
@@ -308,23 +327,24 @@ autocompleteHelper :
     -> Config item msg model
 autocompleteHelper { itemsFromModel, selectionFromModel, dropdownMsg, onSelectMsg, onFilterChangeMsg, itemToPrompt, itemToElement, itemToText } =
     Config
-        { dropdownType = AutoCompleteHelper
-        , itemsFromModel = itemsFromModel
-        , selectionFromModel = selectionFromModel >> SingleItem
+        { closeButton = text "▲"
+        , containerAttributes = []
         , dropdownMsg = dropdownMsg
-        , onSelectMsg = OnSelectSingleItem onSelectMsg
-        , onFilterChangeMsg = onFilterChangeMsg
-        , selectionToPrompt = SingleItemToPrompt itemToPrompt
-        , promptElement = el [ width fill ] (text "-- Select --")
+        , dropdownType = AutoCompleteHelper
+        , emptyListElement = Element.none
+        , filterPlaceholder = Just "Filter values"
+        , itemsFromModel = itemsFromModel
         , itemToElement = itemToElement
         , itemToText = itemToText
-        , filterPlaceholder = Just "Filter values"
-        , openButton = text "▼"
-        , closeButton = text "▲"
-        , containerAttributes = []
         , listAttributes = []
+        , onFilterChangeMsg = onFilterChangeMsg
+        , onSelectMsg = OnSelectSingleItem onSelectMsg
+        , openButton = text "▼"
+        , promptElement = el [ width fill ] (text "-- Select --")
         , searchAttributes = []
         , selectAttributes = []
+        , selectionFromModel = selectionFromModel >> SingleItem
+        , selectionToPrompt = SingleItemToPrompt itemToPrompt
         }
 
 
@@ -404,6 +424,16 @@ withOpenCloseButtons { openButton, closeButton } (Config config) =
 withListAttributes : List (Attribute msg) -> Config item msg model -> Config item msg model
 withListAttributes attrs (Config config) =
     Config { config | listAttributes = attrs }
+
+
+{-| When the list is empty, show this element instead.
+
+Most useful in filterable, it shows up when nothing matches the filter value.
+
+-}
+withEmptyListElement : Element msg -> Config item msg model -> Config item msg model
+withEmptyListElement emptyListElement (Config config) =
+    Config { config | emptyListElement = emptyListElement }
 
 
 {-| Update the component state
@@ -774,9 +804,13 @@ bodyView config selectedItems state data =
     if state.isOpen then
         let
             items =
-                column
-                    config.listAttributes
-                    (List.indexedMap (itemView config selectedItems state) data)
+                if List.length data >= 1 then
+                    column
+                        config.listAttributes
+                        (List.indexedMap (itemView config selectedItems state) data)
+
+                else
+                    el config.listAttributes config.emptyListElement
 
             body =
                 el
@@ -955,12 +989,15 @@ isOutsideDropdown dropdownId =
 
 {-| Emits the internal event 'OnClickOutside' and closes the multi select dropdown, works well with subscriptions. Takes:
 
-    - dropdownId: Id of the HTML element from which you want to be notified whenever it is clicked outside!
-    - dropdownMsg: The message to wrap all the internal messages of the dropdown
+  - dropdownId: Id of the HTML element from which you want to be notified whenever it is clicked outside!
 
-    subscriptions : Model -> Sub Msg
-    subscriptions model =
-        onMouseDown (Dropdown.outsideTarget "my-dropdown" DropdownMsg)
+  - dropdownMsg: The message to wrap all the internal messages of the dropdown
+
+```
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    onMouseDown (Dropdown.outsideTarget "my-dropdown" DropdownMsg)
+```
 
 -}
 outsideTarget : String -> (Msg item -> msg) -> Decode.Decoder msg
@@ -978,12 +1015,15 @@ outsideTarget dropdownId dropdownMsg =
 
 {-| Serves as a subscription to know when the user has clicked outside a certain dropdown
 
-    - dropdownState: State of the dropdown we want to subscribe to
-    - dropdownMsg: The message to wrap all the internal messages of the dropdown
+  - dropdownState: State of the dropdown we want to subscribe to
 
-    subscriptions : Model -> Sub Msg
-    subscriptions model =
-        Dropdown.onOutsideClick model.dropdownState DropdownMsg
+  - dropdownMsg: The message to wrap all the internal messages of the dropdown
+
+```
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Dropdown.onOutsideClick model.dropdownState DropdownMsg
+```
 
 -}
 onOutsideClick : State item -> (Msg item -> msg) -> Sub msg
