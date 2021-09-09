@@ -3,7 +3,7 @@
     "name": "PaackEng/elm-ui-dropdown",
     "summary": "An Elm UI dropdown component",
     "license": "MIT",
-    "version": "3.2.0",
+    "version": "3.3.0",
     "exposed-modules": [
         "Dropdown"
     ],
